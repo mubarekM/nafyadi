@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import Link from "next/link";
 
 export default function StudentHome() {
   const router = useRouter();
@@ -47,7 +48,11 @@ export default function StudentHome() {
   }
 
   const cards = [
-    { title: "Lessons", text: "Read lessons and watch videos", soon: true },
+    {
+      title: "Lessons",
+      text: "Read lessons and watch videos",
+      href: "/student/lessons",
+    },
     { title: "Quizzes", text: "Practice and test yourself", soon: true },
     { title: "My Progress", text: "See your grades and progress", soon: true },
     { title: "Live Class", text: "Join your teacher's live class", soon: true },
@@ -76,17 +81,26 @@ export default function StudentHome() {
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {cards.map((c) => (
-            <div key={c.title} className="rounded-2xl bg-white p-6 shadow">
-              <h3 className="text-lg font-bold text-purple-700">{c.title}</h3>
-              <p className="mt-1 text-sm text-gray-600">{c.text}</p>
-              {c.soon && (
+          {cards.map((c) =>
+            c.href ? (
+              <Link
+                key={c.title}
+                href={c.href}
+                className="block rounded-2xl bg-white p-6 shadow hover:shadow-md"
+              >
+                <h3 className="text-lg font-bold text-purple-700">{c.title}</h3>
+                <p className="mt-1 text-sm text-gray-600">{c.text}</p>
+              </Link>
+            ) : (
+              <div key={c.title} className="rounded-2xl bg-white p-6 shadow">
+                <h3 className="text-lg font-bold text-purple-700">{c.title}</h3>
+                <p className="mt-1 text-sm text-gray-600">{c.text}</p>
                 <span className="mt-3 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
                   Coming soon
                 </span>
-              )}
-            </div>
-          ))}
+              </div>
+            ),
+          )}
         </div>
       </section>
     </main>
