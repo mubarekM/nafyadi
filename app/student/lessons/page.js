@@ -27,6 +27,7 @@ function isAudio(name) {
 
 export default function StudentLessons() {
   const router = useRouter();
+  const [userId, setUserId] = useState(null);
   const [lessons, setLessons] = useState(null);
   const [selected, setSelected] = useState(null);
 
@@ -52,6 +53,8 @@ export default function StudentLessons() {
         router.replace("/login");
         return;
       }
+      setUserId(userData.user.id);
+
       const { data } = await supabase
         .from("lessons")
         .select("*")
@@ -66,6 +69,20 @@ export default function StudentLessons() {
     }
     start();
   }, [router]);
+
+  async function openLesson(l) {
+    setSelected(l);
+    window.scrollTo({ top: 0 });
+    if (userId) {
+      const supabase = createClient();
+      await supabase
+        .from("lesson_views")
+        .upsert(
+          { student_id: userId, lesson_id: l.id },
+          { onConflict: "student_id,lesson_id", ignoreDuplicates: true },
+        );
+    }
+  }
 
   if (!lessons) {
     return (
@@ -104,7 +121,7 @@ export default function StudentLessons() {
               {lessons.map((l) => (
                 <button
                   key={l.id}
-                  onClick={() => setSelected(l)}
+                  onClick={() => openLesson(l)}
                   className="block w-full rounded-2xl bg-white p-5 text-left shadow hover:shadow-md"
                 >
                   <p className="text-lg font-bold text-purple-700">{l.title}</p>
