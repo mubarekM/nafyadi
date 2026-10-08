@@ -2,13 +2,41 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase";
 
 export default function Signup() {
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // Later we will save the student in the database here
+    setError("");
+    setLoading(true);
+
+    const form = new FormData(e.currentTarget);
+    const supabase = createClient();
+
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: form.get("email"),
+      password: form.get("password"),
+      options: {
+        data: {
+          full_name: form.get("full_name"),
+          phone: form.get("phone"),
+          english_level: form.get("english_level"),
+        },
+      },
+    });
+
+    // Students must wait for approval, so log them out right away
+    await supabase.auth.signOut();
+    setLoading(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
     setDone(true);
   }
 
@@ -30,7 +58,8 @@ export default function Signup() {
 
         {done ? (
           <p className="mt-6 rounded-lg bg-purple-100 p-4 text-purple-800">
-            Thank you! Your request was received (demo only for now).
+            Thank you! Your request was received. Your teacher will approve your
+            account soon, then you can log in.
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -38,23 +67,38 @@ export default function Signup() {
               <label className="mb-1 block text-sm font-medium">
                 Full name
               </label>
-              <input type="text" required className={inputStyle} />
+              <input
+                name="full_name"
+                type="text"
+                required
+                className={inputStyle}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Email</label>
-              <input type="email" required className={inputStyle} />
+              <input
+                name="email"
+                type="email"
+                required
+                className={inputStyle}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
                 Phone number
               </label>
-              <input type="tel" required className={inputStyle} />
+              <input name="phone" type="tel" required className={inputStyle} />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
                 English level
               </label>
-              <select required className={inputStyle} defaultValue="">
+              <select
+                name="english_level"
+                required
+                className={inputStyle}
+                defaultValue=""
+              >
                 <option value="" disabled>
                   Choose your level
                 </option>
@@ -68,17 +112,26 @@ export default function Signup() {
             <div>
               <label className="mb-1 block text-sm font-medium">Password</label>
               <input
+                name="password"
                 type="password"
                 required
                 minLength={6}
                 className={inputStyle}
               />
             </div>
+
+            {error && (
+              <p className="rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-full bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700"
+              disabled={loading}
+              className="w-full rounded-full bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
             >
-              Create account
+              {loading ? "Please wait..." : "Create account"}
             </button>
           </form>
         )}

@@ -1,16 +1,50 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 export default function AdminLogin() {
-  const [message, setMessage] = useState("");
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // Later we will check that this is really the teacher, using the database
-    setMessage(
-      "Demo only for now. Real admin login comes after we connect Supabase.",
+    setError("");
+    setLoading(true);
+
+    const form = new FormData(e.currentTarget);
+    const supabase = createClient();
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword(
+      {
+        email: form.get("email"),
+        password: form.get("password"),
+      },
     );
+
+    if (signInError) {
+      setError("Wrong email or password.");
+      setLoading(false);
+      return;
+    }
+
+    // Check that this account is really the admin
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      await supabase.auth.signOut();
+      setError("This account is not allowed here.");
+      setLoading(false);
+      return;
+    }
+
+    router.push("/admin/dashboard");
   }
 
   const inputStyle =
@@ -30,27 +64,34 @@ export default function AdminLogin() {
             <label className="mb-1 block text-sm font-medium text-gray-300">
               Admin email
             </label>
-            <input type="email" required className={inputStyle} />
+            <input name="email" type="email" required className={inputStyle} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-300">
               Password
             </label>
-            <input type="password" required className={inputStyle} />
+            <input
+              name="password"
+              type="password"
+              required
+              className={inputStyle}
+            />
           </div>
+
+          {error && (
+            <p className="rounded-lg bg-red-950 p-3 text-sm text-red-300">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full rounded-lg bg-purple-600 py-3 font-semibold text-white hover:bg-purple-500"
+            disabled={loading}
+            className="w-full rounded-lg bg-purple-600 py-3 font-semibold text-white hover:bg-purple-500 disabled:opacity-60"
           >
-            Sign in
+            {loading ? "Please wait..." : "Sign in"}
           </button>
         </form>
-
-        {message && (
-          <p className="mt-4 rounded-lg bg-gray-800 p-3 text-sm text-purple-300">
-            {message}
-          </p>
-        )}
       </div>
     </main>
   );

@@ -2,16 +2,65 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 export default function Login() {
-  const [message, setMessage] = useState("");
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // Later we will check the email and password in the database here
-    setMessage(
-      "Demo only for now. Real login comes after we connect Supabase.",
+    setError("");
+    setLoading(true);
+
+    const form = new FormData(e.currentTarget);
+    const supabase = createClient();
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword(
+      {
+        email: form.get("email"),
+        password: form.get("password"),
+      },
     );
+
+    if (signInError) {
+      setError("Wrong email or password.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("status, role")
+      .eq("id", data.user.id)
+      .single();
+
+    if (profile?.role === "admin") {
+      await supabase.auth.signOut();
+      setError("Please use the teacher login page.");
+      setLoading(false);
+      return;
+    }
+
+    if (profile?.status === "pending") {
+      await supabase.auth.signOut();
+      setError(
+        "Your account is waiting for your teacher's approval. Please try again later.",
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (profile?.status === "rejected") {
+      await supabase.auth.signOut();
+      setError("Your account was not approved. Please contact your teacher.");
+      setLoading(false);
+      return;
+    }
+
+    router.push("/student");
   }
 
   const inputStyle =
@@ -33,25 +82,32 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Email</label>
-            <input type="email" required className={inputStyle} />
+            <input name="email" type="email" required className={inputStyle} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Password</label>
-            <input type="password" required className={inputStyle} />
+            <input
+              name="password"
+              type="password"
+              required
+              className={inputStyle}
+            />
           </div>
+
+          {error && (
+            <p className="rounded-lg bg-red-100 p-3 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full rounded-full bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700"
+            disabled={loading}
+            className="w-full rounded-full bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
           >
-            Log in
+            {loading ? "Please wait..." : "Log in"}
           </button>
         </form>
-
-        {message && (
-          <p className="mt-4 rounded-lg bg-purple-100 p-3 text-sm text-purple-800">
-            {message}
-          </p>
-        )}
 
         <p className="mt-6 text-center text-sm text-gray-600">
           New here?{" "}
