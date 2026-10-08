@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [opened, setOpened] = useState({});
   const [ready, setReady] = useState(false);
   const [savedId, setSavedId] = useState(null);
+  const [resetResult, setResetResult] = useState(null);
 
   async function loadStudents(supabase) {
     const { data } = await supabase
@@ -71,6 +72,52 @@ export default function AdminDashboard() {
     setTimeout(() => setSavedId(null), 2000);
   }
 
+  async function resetPassword(e, student) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const password = String(new FormData(form).get("password") || "").trim();
+
+    if (password.length < 6) {
+      setResetResult({
+        id: student.id,
+        ok: false,
+        text: "Use at least 6 characters.",
+      });
+      return;
+    }
+    if (!confirm(`Change the password for ${student.full_name}?`)) return;
+
+    setResetResult({ id: student.id, ok: true, text: "Saving..." });
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: student.id, password }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setResetResult({
+          id: student.id,
+          ok: false,
+          text: result.error || "Failed.",
+        });
+        return;
+      }
+      form.reset();
+      setResetResult({
+        id: student.id,
+        ok: true,
+        text: `Done. New password for ${student.full_name}: ${password}`,
+      });
+    } catch {
+      setResetResult({
+        id: student.id,
+        ok: false,
+        text: "Something went wrong.",
+      });
+    }
+  }
+
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -93,6 +140,9 @@ export default function AdminDashboard() {
     approved: "bg-green-900 text-green-300",
     rejected: "bg-red-900 text-red-300",
   };
+
+  const inputStyle =
+    "w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-white placeholder-gray-500 focus:border-purple-400 focus:outline-none";
 
   function renderStudent(s) {
     return (
@@ -138,28 +188,65 @@ export default function AdminDashboard() {
         </div>
 
         {s.status === "approved" && (
-          <form onSubmit={(e) => saveNote(e, s.id)} className="mt-4">
-            <label className="mb-1 block text-sm text-gray-300">
-              Note for this student (they can read it)
-            </label>
-            <textarea
-              name="note"
-              defaultValue={s.teacher_note || ""}
-              rows={2}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-white placeholder-gray-500 focus:border-purple-400 focus:outline-none"
-            />
-            <div className="mt-2 flex items-center gap-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500"
-              >
-                Save note
-              </button>
-              {savedId === s.id && (
-                <span className="text-sm text-green-400">Saved</span>
+          <>
+            <form onSubmit={(e) => saveNote(e, s.id)} className="mt-4">
+              <label className="mb-1 block text-sm text-gray-300">
+                Note for this student (they can read it)
+              </label>
+              <textarea
+                name="note"
+                defaultValue={s.teacher_note || ""}
+                rows={2}
+                className={inputStyle}
+              />
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500"
+                >
+                  Save note
+                </button>
+                {savedId === s.id && (
+                  <span className="text-sm text-green-400">Saved</span>
+                )}
+              </div>
+            </form>
+
+            <form
+              onSubmit={(e) => resetPassword(e, s)}
+              className="mt-4 border-t border-gray-800 pt-4"
+            >
+              <label className="mb-1 block text-sm text-gray-300">
+                Reset password (type a new temporary password)
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  name="password"
+                  type="text"
+                  placeholder="At least 6 characters"
+                  autoComplete="off"
+                  className={inputStyle}
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg border border-purple-500 px-4 py-2 text-sm font-semibold text-purple-300 hover:bg-gray-800 sm:whitespace-nowrap"
+                >
+                  Reset password
+                </button>
+              </div>
+              {resetResult?.id === s.id && (
+                <p
+                  className={`mt-2 rounded-lg p-3 text-sm ${
+                    resetResult.ok
+                      ? "bg-green-950 text-green-300"
+                      : "bg-red-950 text-red-300"
+                  }`}
+                >
+                  {resetResult.text}
+                </p>
               )}
-            </div>
-          </form>
+            </form>
+          </>
         )}
       </div>
     );
