@@ -12,11 +12,14 @@ export default function StudentHome() {
   useEffect(() => {
     async function start() {
       const supabase = createClient();
+
       const { data: userData } = await supabase.auth.getUser();
+
       if (!userData.user) {
         router.replace("/login");
         return;
       }
+
       const { data } = await supabase
         .from("profiles")
         .select("*")
@@ -28,13 +31,16 @@ export default function StudentHome() {
         router.replace("/login");
         return;
       }
+
       setProfile(data);
     }
+
     start();
   }, [router]);
 
   async function logout() {
     const supabase = createClient();
+
     await supabase.auth.signOut();
     router.replace("/login");
   }
@@ -53,9 +59,21 @@ export default function StudentHome() {
       text: "Read lessons and watch videos",
       href: "/student/lessons",
     },
-    { title: "Quizzes", text: "Practice and test yourself", soon: true },
-    { title: "My Progress", text: "See your grades and progress", soon: true },
-    { title: "Live Class", text: "Join your teacher's live class", soon: true },
+    {
+      title: "Quizzes",
+      text: "Practice and test yourself",
+      href: "/student/quizzes",
+    },
+    {
+      title: "My Progress",
+      text: "See your grades and progress",
+      href: "/student/progress",
+    },
+    {
+      title: "Live Class",
+      text: "Join your teacher's live class",
+      href: "/student/live-class",
+    },
   ];
 
   return (
@@ -64,6 +82,7 @@ export default function StudentHome() {
         <h1 className="text-xl font-bold text-purple-700">
           English with Nafyad
         </h1>
+
         <button
           onClick={logout}
           className="rounded-full border border-purple-300 px-4 py-2 text-sm font-semibold text-purple-700 hover:bg-purple-50"
@@ -76,6 +95,7 @@ export default function StudentHome() {
         <h2 className="text-3xl font-extrabold">
           Welcome, <span className="text-purple-600">{profile.full_name}</span>!
         </h2>
+
         <p className="mt-2 text-gray-600">
           Your level: {profile.english_level}
         </p>
@@ -89,12 +109,15 @@ export default function StudentHome() {
                 className="block rounded-2xl bg-white p-6 shadow hover:shadow-md"
               >
                 <h3 className="text-lg font-bold text-purple-700">{c.title}</h3>
+
                 <p className="mt-1 text-sm text-gray-600">{c.text}</p>
               </Link>
             ) : (
               <div key={c.title} className="rounded-2xl bg-white p-6 shadow">
                 <h3 className="text-lg font-bold text-purple-700">{c.title}</h3>
+
                 <p className="mt-1 text-sm text-gray-600">{c.text}</p>
+
                 <span className="mt-3 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
                   Coming soon
                 </span>

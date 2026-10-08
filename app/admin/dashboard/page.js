@@ -16,40 +16,50 @@ export default function AdminDashboard() {
       .select("*")
       .eq("role", "student")
       .order("created_at", { ascending: false });
+
     setStudents(data || []);
   }
 
   useEffect(() => {
     async function start() {
       const supabase = createClient();
+
       const { data: userData } = await supabase.auth.getUser();
+
       if (!userData.user) {
         router.replace("/admin/login");
         return;
       }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", userData.user.id)
         .single();
+
       if (profile?.role !== "admin") {
         router.replace("/admin/login");
         return;
       }
+
       await loadStudents(supabase);
       setReady(true);
     }
+
     start();
   }, [router]);
 
   async function setStatus(id, status) {
     const supabase = createClient();
+
     await supabase.from("profiles").update({ status }).eq("id", id);
+
     await loadStudents(supabase);
   }
 
   async function logout() {
     const supabase = createClient();
+
     await supabase.auth.signOut();
     router.replace("/admin/login");
   }
@@ -76,15 +86,20 @@ export default function AdminDashboard() {
       <div className="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-semibold text-white">{s.full_name}</p>
+
           <p className="text-sm text-gray-400">
             {s.phone} · {s.english_level}
           </p>
+
           <span
-            className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${badge[s.status]}`}
+            className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+              badge[s.status]
+            }`}
           >
             {s.status}
           </span>
         </div>
+
         <div className="flex gap-2">
           {s.status !== "approved" && (
             <button
@@ -94,6 +109,7 @@ export default function AdminDashboard() {
               Approve
             </button>
           )}
+
           {s.status !== "rejected" && (
             <button
               onClick={() => setStatus(s.id, "rejected")}
@@ -110,16 +126,29 @@ export default function AdminDashboard() {
   return (
     <main className="min-h-screen bg-gray-950 px-4 py-8 text-gray-100">
       <div className="mx-auto max-w-3xl">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+
+            {/* Lessons Button */}
             <Link
               href="/admin/lessons"
               className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500"
             >
               Lessons
             </Link>
+
+            {/* Quizzes Button */}
+            <Link
+              href="/admin/quizzes"
+              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500"
+            >
+              Quizzes
+            </Link>
           </div>
+
+          {/* Logout */}
           <button
             onClick={logout}
             className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800"
@@ -128,25 +157,31 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        {/* Pending Students */}
         <h2 className="mt-8 text-lg font-semibold text-purple-300">
           Waiting for approval ({pending.length})
         </h2>
+
         <div className="mt-3 space-y-3">
           {pending.length === 0 && (
             <p className="text-sm text-gray-500">No new students waiting.</p>
           )}
+
           {pending.map((s) => (
             <Row key={s.id} s={s} />
           ))}
         </div>
 
+        {/* Other Students */}
         <h2 className="mt-10 text-lg font-semibold text-purple-300">
           All other students ({others.length})
         </h2>
+
         <div className="mt-3 space-y-3">
           {others.length === 0 && (
             <p className="text-sm text-gray-500">No students yet.</p>
           )}
+
           {others.map((s) => (
             <Row key={s.id} s={s} />
           ))}
