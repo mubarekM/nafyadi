@@ -183,6 +183,12 @@ export default function AdminDashboard() {
             >
               Quizzes
             </Link>
+            <Link
+              href="/admin/live-classes"
+              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500"
+            >
+              Live Classes
+            </Link>
           </div>
           <button
             onClick={logout}
