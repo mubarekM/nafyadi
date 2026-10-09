@@ -218,3 +218,49 @@ p {
     font-size: 112.5%;
   }
 }
+
+/* ===== Picture backgrounds + glass look ===== */
+:root {
+  --bar: rgba(255, 255, 255, 0.9);
+  --soft-a: rgba(239, 246, 255, 0.74);
+  --card-a: rgba(255, 255, 255, 0.86);
+}
+html.dark {
+  --bar: rgba(11, 18, 32, 0.88);
+  --soft-a: rgba(15, 26, 46, 0.66);
+  --card-a: rgba(18, 29, 53, 0.8);
+}
+.b0 {
+  background: var(--bar);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+main.b0,
+.b0.min-h-dvh {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.b1 {
+  background: var(--soft-a);
+}
+.cd {
+  background: var(--card-a);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.bd-fb {
+  background: linear-gradient(135deg, #dbeafe, #fff7ed);
+}
+html.dark .bd-fb {
+  background: linear-gradient(135deg, #0b1220, #16306b 65%, #2a1608);
+}
+.bd-ov {
+  background: linear-gradient(
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.8)
+  );
+}
+html.dark .bd-ov {
+  background: linear-gradient(rgba(8, 14, 30, 0.5), rgba(8, 14, 30, 0.82));
+}
