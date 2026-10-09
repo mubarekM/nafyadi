@@ -9,16 +9,18 @@ const SETS = {
   admin: ["/bg/admin-1.jpg"],
 };
 
-function pick(path) {
-  if (path === "/") return SETS.home;
+function pick(path = "") {
+  if (!path || path === "/") return SETS.home;
   if (path.startsWith("/student")) return SETS.student;
   if (path.startsWith("/admin")) return SETS.admin;
   return [];
 }
 
 export default function Backdrop() {
-  const path = usePathname();
+  const pathname = usePathname();
+  const path = pathname || "";
   const images = pick(path);
+
   const [bad, setBad] = useState({});
   const [i, setI] = useState(0);
 
@@ -26,13 +28,18 @@ export default function Backdrop() {
 
   useEffect(() => {
     setI(0);
-    if (images.length < 2) return;
-    const id = setInterval(() => setI((x) => x + 1), 7000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path]);
+    if (list.length < 2) return;
 
-  const current = list.length ? i % list.length : 0;
+    const id = setInterval(() => {
+      setI((x) => (x + 1) % list.length);
+    }, 7000);
+
+    return () => clearInterval(id);
+  }, [path, list.length]);
+
+  if (!list.length) return null;
+
+  const current = i % list.length;
 
   return (
     <div
