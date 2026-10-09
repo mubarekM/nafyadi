@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { LANGS, usePrefs } from "@/lib/prefs";
+import { usePrefs } from "@/lib/prefs";
+import Controls from "@/components/Controls";
 
 const TG = "https://t.me/NAFYADWJ";
 const TEL = "+251960889388";
@@ -67,18 +68,19 @@ function Times({ rows }) {
   return rows.map(([z, time, d]) => (
     <div
       key={z}
-      className="tx flex items-center gap-3 py-1.5 text-sm font-bold"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 text-sm font-bold"
     >
       <span className="pill w-24 shrink-0 text-center text-xs font-extrabold">
         {z} {d === "s" ? "☀️" : "🌙"}
       </span>
-      <span>{time}</span>
+      <span className="min-w-0 break-words">{time}</span>
     </div>
   ));
 }
 
 export default function Home() {
-  const { t, lang, pick, dark, flip } = usePrefs();
+  const { t } = usePrefs();
+  const [menu, setMenu] = useState(false);
   const nav = [
     ["#about", "about"],
     ["#programs", "programs"],
@@ -91,37 +93,21 @@ export default function Home() {
     ["teens", "teensD", "/teens.jpg"],
     ["adults", "adultsD", "/adults.jpg"],
   ];
+  const line = { borderColor: "var(--ln)" };
 
   return (
     <main className="b0 tx overflow-x-hidden">
-      <style>{`
-        :root{--bg:#fff;--soft:#eff6ff;--card:#fff;--tx:#0f172a;--mu:#475569;--ln:#dbe5f3;--pri:#1d4ed8;--acc:#f97316}
-        html.dark{--bg:#0b1220;--soft:#0f1a2e;--card:#121d35;--tx:#f1f5f9;--mu:#a3b1c6;--ln:#24334f;--pri:#7db2ff;--acc:#fb923c}
-        html{scroll-behavior:smooth} section{scroll-margin-top:72px}
-        .b0{background:var(--bg)} .b1{background:var(--soft)}
-        .cd{background:var(--card);border:1px solid var(--ln);border-radius:1.25rem}
-        .tx{color:var(--tx)} .mu{color:var(--mu)} .pr{color:var(--pri)} .ac{color:var(--acc)}
-        .pill{background:var(--soft);border-radius:.5rem;padding:.3rem .5rem}
-        .btn{background:var(--acc);color:#fff;border-radius:999px;font-weight:800;padding:.85rem 1.6rem;display:inline-block;transition:.2s}
-        .btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
-        .btn2{border:2px solid var(--pri);color:var(--pri);border-radius:999px;font-weight:800;padding:.8rem 1.6rem;display:inline-block}
-        .grad{background:linear-gradient(135deg,#1d4ed8,#f97316)}
-        .lift{transition:.25s} .lift:hover{transform:translateY(-6px);box-shadow:0 20px 40px -20px rgba(29,78,216,.5)}
-        @keyframes up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}} .up{animation:up .7s ease both}
-        @keyframes fl{50%{transform:translateY(-10px)}} .fl{animation:fl 4s ease-in-out infinite}
-        @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-      `}</style>
-
       {/* NAVBAR */}
-      <header
-        className="b0 fixed inset-x-0 top-0 z-50 border-b"
-        style={{ borderColor: "var(--ln)" }}
-      >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3">
-          <a href="#top" className="pr text-lg font-extrabold">
-            English with Nafyad
+      <header className="b0 fixed inset-x-0 top-0 z-50 border-b" style={line}>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <a
+            href="#top"
+            className="pr shrink-0 text-base font-extrabold sm:text-lg"
+          >
+            <span className="hidden min-[400px]:inline">English with </span>
+            Nafyad
           </a>
-          <nav className="hidden gap-6 md:flex">
+          <nav className="hidden gap-6 lg:flex">
             {nav.map(([h, k]) => (
               <a
                 key={h}
@@ -133,53 +119,64 @@ export default function Home() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <select
-              value={lang}
-              onChange={(e) => pick(e.target.value)}
-              aria-label="Language"
-              className="cd tx px-2 py-1.5 text-sm font-bold"
-            >
-              {Object.entries(LANGS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
+            <Controls />
+            <div className="hidden sm:block">
+              <Link href="/signup" className="btn !px-4 !py-2 text-sm">
+                {t("join")}
+              </Link>
+            </div>
             <button
-              onClick={flip}
-              aria-label="Dark mode"
-              className="cd px-3 py-1.5 text-lg"
+              onClick={() => setMenu(!menu)}
+              aria-label="Menu"
+              className="cd px-3 py-1.5 text-lg lg:hidden"
             >
-              {dark ? "☀️" : "🌙"}
+              {menu ? "✕" : "☰"}
             </button>
-            <Link
-              href="/signup"
-              className="btn hidden !px-4 !py-2 text-sm sm:inline-block"
-            >
-              {t("join")}
-            </Link>
           </div>
         </div>
+        {menu && (
+          <div className="b0 border-t px-4 pb-5 pt-2 lg:hidden" style={line}>
+            {nav.map(([h, k]) => (
+              <a
+                key={h}
+                href={h}
+                onClick={() => setMenu(false)}
+                className="tx block py-3 text-base font-bold"
+              >
+                {t(k)}
+              </a>
+            ))}
+            <Link href="/signup" className="btn mt-3 block w-full">
+              {t("join")}
+            </Link>
+            <Link href="/login" className="btn2 mt-3 block w-full">
+              {t("login")}
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* HERO */}
-      <section id="top" className="b1 px-5 pb-20 pt-32">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+      <section
+        id="top"
+        className="b1 px-4 pb-16 pt-28 sm:px-6 sm:pb-20 sm:pt-32"
+      >
+        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <div className="up">
             <span className="cd pr inline-block px-4 py-2 text-sm font-extrabold">
               🎓 {t("badge")}
             </span>
-            <h1 className="mt-5 text-5xl font-extrabold leading-tight sm:text-6xl">
+            <h1 className="fluid-h1 mt-5 font-extrabold">
               {t("h1a")} <span className="ac">{t("h1b")}</span>
             </h1>
-            <p className="mu mt-5 max-w-xl text-lg font-semibold leading-relaxed">
+            <p className="mu mt-5 max-w-xl text-base font-semibold leading-relaxed sm:text-lg">
               {t("sub")}
             </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link href="/signup" className="btn">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+              <Link href="/signup" className="btn w-full sm:w-auto">
                 {t("cta1")} →
               </Link>
-              <Link href="/login" className="btn2">
+              <Link href="/login" className="btn2 w-full sm:w-auto">
                 {t("cta2")}
               </Link>
             </div>
@@ -188,9 +185,9 @@ export default function Home() {
             <Photo
               src="/hero.jpg"
               alt="Student learning English online"
-              cls="h-80 w-full rounded-3xl shadow-2xl sm:h-[26rem]"
+              cls="h-64 w-full rounded-3xl shadow-2xl sm:h-80 lg:h-[28rem]"
             />
-            <div className="cd fl pr absolute -bottom-5 left-4 px-5 py-3 text-sm font-extrabold shadow-xl">
+            <div className="cd fl pr absolute -bottom-4 left-3 px-4 py-2.5 text-sm font-extrabold shadow-xl">
               🔴 Live · Zoom / Meet
             </div>
           </div>
@@ -198,14 +195,20 @@ export default function Home() {
       </section>
 
       {/* PROGRAMS */}
-      <section id="programs" className="px-5 py-20">
-        <h2 className="mx-auto max-w-3xl text-center text-3xl font-extrabold sm:text-4xl">
+      <section
+        id="programs"
+        className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
+        <h2 className="fluid-h2 mx-auto max-w-3xl text-center font-extrabold">
           {t("progT")}
         </h2>
-        <div className="mx-auto mt-12 grid max-w-6xl gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-10 grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {programs.map(([n, d, img]) => (
-            <div key={n} className="cd lift overflow-hidden">
-              <Photo src={img} alt={t(n)} cls="h-48 w-full" />
+            <div
+              key={n}
+              className="cd lift overflow-hidden sm:last:col-span-2 lg:last:col-span-1"
+            >
+              <Photo src={img} alt={t(n)} cls="h-44 w-full sm:h-48" />
               <div className="p-6">
                 <h3 className="pr text-xl font-extrabold">{t(n)}</h3>
                 <p className="mu mt-2 font-semibold">{t(d)}</p>
@@ -216,31 +219,31 @@ export default function Home() {
       </section>
 
       {/* SCHEDULE */}
-      <section id="schedule" className="b1 px-5 py-20">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.4fr]">
+      <section
+        id="schedule"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div>
-            <h2 className="text-4xl font-extrabold">{t("schT")}</h2>
+            <h2 className="fluid-h2 font-extrabold">{t("schT")}</h2>
             <p className="mu mt-4 font-semibold leading-relaxed">{t("schD")}</p>
-            <div className="cd mt-8 p-6">
+            <div className="cd mt-8 p-5 sm:p-6">
               <p className="text-lg font-extrabold">🔴 {t("live")}</p>
-              <p
-                className="pr mt-4 border-t pt-4 font-extrabold"
-                style={{ borderColor: "var(--ln)" }}
-              >
+              <p className="pr mt-4 border-t pt-4 font-extrabold" style={line}>
                 📅 {t(LIVE[0])}
               </p>
               <Times rows={LIVE[1]} />
             </div>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {GROUPS.map((rows, i) => (
-              <div key={i} className="cd p-6">
+              <div key={i} className="cd p-5 sm:p-6">
                 <p className="text-lg font-extrabold">
                   {t("group")} {i + 1}
                 </p>
                 <p
                   className="pr mt-1 border-b pb-3 font-extrabold"
-                  style={{ borderColor: "var(--ln)" }}
+                  style={line}
                 >
                   {t("tuethu")}
                 </p>
@@ -252,16 +255,17 @@ export default function Home() {
       </section>
 
       {/* PRICES */}
-      <section id="prices" className="px-5 py-20">
-        <h2 className="text-center text-3xl font-extrabold sm:text-4xl">
-          {t("prT")}
-        </h2>
+      <section id="prices" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
+        <h2 className="fluid-h2 text-center font-extrabold">{t("prT")}</h2>
         <p className="mu mt-3 text-center font-semibold">{t("pNote")}</p>
-        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {PRICES.map(([k, p]) => (
-            <div key={k} className="cd lift p-8 text-center">
+            <div
+              key={k}
+              className="cd lift p-8 text-center sm:last:col-span-2 lg:last:col-span-1"
+            >
               <p className="text-lg font-extrabold">{t(k)}</p>
-              <p className="pr mt-4 text-5xl font-extrabold">
+              <p className="pr mt-4 text-4xl font-extrabold sm:text-5xl">
                 {p.toLocaleString("en-US")}
               </p>
               <p className="mu mt-1 font-bold">
@@ -276,16 +280,19 @@ export default function Home() {
       </section>
 
       {/* ABOUT */}
-      <section id="about" className="b1 px-5 py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+      <section
+        id="about"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
+        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <Photo
             src="/nafyad.jpg"
             alt="Teacher Nafyad WJ"
-            cls="mx-auto h-96 w-full max-w-sm rounded-3xl shadow-2xl"
+            cls="mx-auto h-80 w-full max-w-sm rounded-3xl shadow-2xl sm:h-96"
           />
           <div>
-            <h2 className="text-4xl font-extrabold">{t("aboutT")}</h2>
-            <p className="mu mt-5 text-lg font-semibold leading-relaxed">
+            <h2 className="fluid-h2 font-extrabold">{t("aboutT")}</h2>
+            <p className="mu mt-5 text-base font-semibold leading-relaxed sm:text-lg">
               {t("aboutD")}
             </p>
           </div>
@@ -293,22 +300,25 @@ export default function Home() {
       </section>
 
       {/* CONTACT */}
-      <section id="contact" className="px-5 py-20">
-        <div className="grad mx-auto max-w-4xl rounded-3xl p-10 text-center text-white">
-          <h2 className="text-3xl font-extrabold sm:text-4xl">{t("conT")}</h2>
+      <section
+        id="contact"
+        className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
+        <div className="grad mx-auto max-w-4xl rounded-3xl p-6 text-center text-white sm:p-10">
+          <h2 className="fluid-h2 font-extrabold">{t("conT")}</h2>
           <p className="mt-3 font-semibold text-white/90">{t("conD")}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
             <a
               href={TG}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full bg-white px-7 py-3 font-extrabold text-blue-700"
+              className="inline-block rounded-full bg-white px-7 py-3 text-center font-extrabold text-blue-700"
             >
               ✈️ {t("tg")}
             </a>
             <a
               href={`tel:${TEL}`}
-              className="rounded-full border-2 border-white px-7 py-3 font-extrabold"
+              className="inline-block break-words rounded-full border-2 border-white px-7 py-3 text-center font-extrabold"
             >
               📞 {t("call")} {TEL}
             </a>
@@ -317,8 +327,8 @@ export default function Home() {
       </section>
 
       <footer
-        className="mu border-t px-5 py-8 text-center text-sm font-bold"
-        style={{ borderColor: "var(--ln)" }}
+        className="mu border-t px-4 py-8 text-center text-sm font-bold"
+        style={line}
       >
         © 2026 English with Nafyad. {t("foot")}
       </footer>

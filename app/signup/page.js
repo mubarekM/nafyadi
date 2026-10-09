@@ -3,8 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { usePrefs } from "@/lib/prefs";
+import AuthShell from "@/components/AuthShell";
+
+// The first word is saved in the database (keep it in English). The second is the translated label.
+const LEVELS = [
+  ["Beginner", "lvBeginner"],
+  ["Elementary", "lvElementary"],
+  ["Intermediate", "lvIntermediate"],
+  ["Upper-intermediate", "lvUpper"],
+  ["Advanced", "lvAdvanced"],
+];
 
 export default function Signup() {
+  const { t } = usePrefs();
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,112 +52,72 @@ export default function Signup() {
     setDone(true);
   }
 
-  const inputStyle =
-    "w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-purple-500 focus:outline-none";
-
   return (
-    <main className="flex min-h-screen items-center justify-center bg-purple-50 px-4 py-10 text-gray-900">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <Link href="/" className="text-sm text-purple-600 hover:underline">
-          ← Back to home
-        </Link>
-        <h1 className="mt-4 text-2xl font-bold text-purple-700">
-          Join English with Nafyad
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Fill in your details. Your teacher will approve your account.
-        </p>
+    <AuthShell>
+      <h1 className="text-4xl font-extrabold">{t("signTitle")}</h1>
+      <p className="mu mt-2 font-semibold">{t("signSub")}</p>
 
-        {done ? (
-          <p className="mt-6 rounded-lg bg-purple-100 p-4 text-purple-800">
-            Thank you! Your request was received. Your teacher will approve your
-            account soon, then you can log in.
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Full name
-              </label>
-              <input
-                name="full_name"
-                type="text"
-                required
-                className={inputStyle}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Email</label>
-              <input
-                name="email"
-                type="email"
-                required
-                className={inputStyle}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Phone number
-              </label>
-              <input name="phone" type="tel" required className={inputStyle} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                English level
-              </label>
-              <select
-                name="english_level"
-                required
-                className={inputStyle}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Choose your level
-                </option>
-                <option>Beginner</option>
-                <option>Elementary</option>
-                <option>Intermediate</option>
-                <option>Upper-intermediate</option>
-                <option>Advanced</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Password</label>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                className={inputStyle}
-              />
-            </div>
-
-            {error && (
-              <p className="rounded-lg bg-red-100 p-3 text-sm text-red-700">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-full bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
+      {done ? (
+        <p className="ok mt-8">{t("thanks")}</p>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <div>
+            <label className="lbl">{t("fullName")}</label>
+            <input name="full_name" type="text" required className="field" />
+          </div>
+          <div>
+            <label className="lbl">{t("email")}</label>
+            <input name="email" type="email" required className="field" />
+          </div>
+          <div>
+            <label className="lbl">{t("phone")}</label>
+            <input name="phone" type="tel" required className="field" />
+          </div>
+          <div>
+            <label className="lbl">{t("level")}</label>
+            <select
+              name="english_level"
+              required
+              defaultValue=""
+              className="field"
             >
-              {loading ? "Please wait..." : "Create account"}
-            </button>
-          </form>
-        )}
+              <option value="" disabled>
+                {t("chooseLevel")}
+              </option>
+              {LEVELS.map(([value, key]) => (
+                <option key={value} value={value}>
+                  {t(key)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="lbl">
+              {t("password")} ({t("pwHint")})
+            </label>
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              className="field"
+            />
+          </div>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-purple-600 hover:underline"
-          >
-            Log in
-          </Link>
-        </p>
-      </div>
-    </main>
+          {error && <p className="err">{error}</p>}
+
+          <button type="submit" disabled={loading} className="btn w-full">
+            {loading ? t("wait") : t("signBtn")}
+          </button>
+        </form>
+      )}
+
+      <p className="mu mt-8 text-center text-sm font-bold">
+        {t("hasAcc")}{" "}
+        <Link href="/login" className="pr hover:underline">
+          {t("goLogin")}
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

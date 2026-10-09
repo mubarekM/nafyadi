@@ -4,9 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { usePrefs } from "@/lib/prefs";
+import AuthShell from "@/components/AuthShell";
 
 export default function Login() {
   const router = useRouter();
+  const { t } = usePrefs();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +29,7 @@ export default function Login() {
     );
 
     if (signInError) {
-      setError("Wrong email or password.");
+      setError("errWrong");
       setLoading(false);
       return;
     }
@@ -39,23 +42,19 @@ export default function Login() {
 
     if (profile?.role === "admin") {
       await supabase.auth.signOut();
-      setError("Please use the teacher login page.");
+      setError("errAdmin");
       setLoading(false);
       return;
     }
-
     if (profile?.status === "pending") {
       await supabase.auth.signOut();
-      setError(
-        "Your account is waiting for your teacher's approval. Please try again later.",
-      );
+      setError("errPending");
       setLoading(false);
       return;
     }
-
     if (profile?.status === "rejected") {
       await supabase.auth.signOut();
-      setError("Your account was not approved. Please contact your teacher.");
+      setError("errRejected");
       setLoading(false);
       return;
     }
@@ -63,62 +62,34 @@ export default function Login() {
     router.push("/student");
   }
 
-  const inputStyle =
-    "w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-purple-500 focus:outline-none";
-
   return (
-    <main className="flex min-h-screen items-center justify-center bg-purple-50 px-4 py-10 text-gray-900">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <Link href="/" className="text-sm text-purple-600 hover:underline">
-          ← Back to home
+    <AuthShell>
+      <h1 className="text-4xl font-extrabold">{t("loginTitle")}</h1>
+      <p className="mu mt-2 font-semibold">{t("loginSub")}</p>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <div>
+          <label className="lbl">{t("email")}</label>
+          <input name="email" type="email" required className="field" />
+        </div>
+        <div>
+          <label className="lbl">{t("password")}</label>
+          <input name="password" type="password" required className="field" />
+        </div>
+
+        {error && <p className="err">{t(error)}</p>}
+
+        <button type="submit" disabled={loading} className="btn w-full">
+          {loading ? t("wait") : t("loginBtn")}
+        </button>
+      </form>
+
+      <p className="mu mt-8 text-center text-sm font-bold">
+        {t("newHere")}{" "}
+        <Link href="/signup" className="pr hover:underline">
+          {t("createAcc")}
         </Link>
-        <h1 className="mt-4 text-2xl font-bold text-purple-700">
-          Student Login
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Welcome back! Log in to continue learning.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Email</label>
-            <input name="email" type="email" required className={inputStyle} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Password</label>
-            <input
-              name="password"
-              type="password"
-              required
-              className={inputStyle}
-            />
-          </div>
-
-          {error && (
-            <p className="rounded-lg bg-red-100 p-3 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-full bg-purple-600 py-3 font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
-          >
-            {loading ? "Please wait..." : "Log in"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          New here?{" "}
-          <Link
-            href="/signup"
-            className="font-semibold text-purple-600 hover:underline"
-          >
-            Create an account
-          </Link>
-        </p>
-      </div>
-    </main>
+      </p>
+    </AuthShell>
   );
 }
