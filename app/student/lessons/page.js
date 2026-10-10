@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import { useStudent, lvLabel } from "@/components/StudentShell";
+import LockedCard from "@/components/LockedCard";
 
 function getEmbedUrl(url) {
   if (!url) return null;
@@ -23,7 +24,7 @@ function getEmbedUrl(url) {
 const isAudio = (name) => /\.(mp3|wav|m4a|ogg|aac)$/i.test(name || "");
 
 export default function StudentLessons() {
-  const { id, profile } = useStudent();
+  const { id, profile, access } = useStudent();
   const { t } = usePrefs();
   const [lessons, setLessons] = useState(null);
   const [opened, setOpened] = useState(new Set());
@@ -31,6 +32,7 @@ export default function StudentLessons() {
   const [shown, setShown] = useState({});
 
   useEffect(() => {
+    if (!access) return;
     async function load() {
       const supabase = createClient();
       const { data } = await supabase
@@ -62,7 +64,7 @@ export default function StudentLessons() {
       setChecks(map);
     }
     load();
-  }, [id, profile.english_level]);
+  }, [id, profile.english_level, access]);
 
   async function onToggle(e, l) {
     const open = e.currentTarget.open;
@@ -97,6 +99,7 @@ export default function StudentLessons() {
     );
   }
 
+  if (!access) return <LockedCard />;
   if (!lessons) return <p className="mu font-bold">...</p>;
 
   // Group lessons by week

@@ -72,10 +72,15 @@ export default function StudentShell({ children }) {
         router.replace("/login");
         return;
       }
-      setMe({ id: userData.user.id, profile: data });
+
+      // Is the student allowed to open lessons and quizzes right now?
+      // If the check itself fails, we do not lock anyone by mistake.
+      const { data: acc } = await supabase.rpc("has_access");
+
+      setMe({ id: userData.user.id, profile: data, access: acc !== false });
     }
     start();
-  }, [router]);
+  }, [router, path]);
 
   async function logout() {
     const supabase = createClient();

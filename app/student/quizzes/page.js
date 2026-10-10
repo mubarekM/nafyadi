@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import { useStudent, lvLabel } from "@/components/StudentShell";
+import LockedCard from "@/components/LockedCard";
 
 export default function StudentQuizzes() {
-  const { id, profile } = useStudent();
+  const { id, profile, access } = useStudent();
   const { t } = usePrefs();
   const [quizzes, setQuizzes] = useState(null);
   const [subs, setSubs] = useState({});
@@ -29,6 +30,7 @@ export default function StudentQuizzes() {
   }
 
   useEffect(() => {
+    if (!access) return;
     async function load() {
       const supabase = createClient();
       const { data } = await supabase
@@ -45,7 +47,7 @@ export default function StudentQuizzes() {
     }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.english_level]);
+  }, [profile.english_level, access]);
 
   async function openQuiz(quiz) {
     setError("");
@@ -86,6 +88,7 @@ export default function StudentQuizzes() {
     setSending(false);
   }
 
+  if (!access) return <LockedCard />;
   if (!quizzes) return <p className="mu font-bold">...</p>;
 
   if (!selected) {

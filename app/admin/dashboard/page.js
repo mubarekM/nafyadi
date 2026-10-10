@@ -8,6 +8,7 @@ const BADGE = { pending: "chip-y", approved: "chip-g", rejected: "chip-r" };
 export default function AdminDashboard() {
   const [students, setStudents] = useState(null);
   const [opened, setOpened] = useState({});
+  const [payMap, setPayMap] = useState({});
   const [stats, setStats] = useState({ lessons: 0, toGrade: 0 });
   const [search, setSearch] = useState("");
   const [savedId, setSavedId] = useState(null);
@@ -31,6 +32,21 @@ export default function AdminDashboard() {
     });
     setOpened(counts);
 
+    // Payment status for the current month
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const { data: pays } = await supabase
+      .from("payments")
+      .select("student_id, status")
+      .eq("month", month);
+    const map = {};
+    (pays || []).forEach((p) => {
+      if (p.status === "approved") map[p.student_id] = "paid";
+      else if (p.status === "pending" && map[p.student_id] !== "paid")
+        map[p.student_id] = "review";
+    });
+    setPayMap(map);
+
     const l = await supabase
       .from("lessons")
       .select("id", { count: "exact", head: true });
@@ -48,6 +64,15 @@ export default function AdminDashboard() {
   async function setStatus(id, status) {
     const supabase = createClient();
     await supabase.from("profiles").update({ status }).eq("id", id);
+    await load();
+  }
+
+  async function toggleFree(s) {
+    const supabase = createClient();
+    await supabase
+      .from("profiles")
+      .update({ free_access: !s.free_access })
+      .eq("id", s.id);
     await load();
   }
 
@@ -116,6 +141,7 @@ export default function AdminDashboard() {
   ];
 
   function studentCard(s) {
+    const pay = payMap[s.id];
     return (
       <div key={s.id} className="cd p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -132,9 +158,19 @@ export default function AdminDashboard() {
               <span className="chip chip-n">
                 {opened[s.id] || 0} lessons opened
               </span>
+              {s.status === "approved" &&
+                (s.free_access ? (
+                  <span className="chip chip-n">free access</span>
+                ) : pay === "paid" ? (
+                  <span className="chip chip-g">paid this month</span>
+                ) : pay === "review" ? (
+                  <span className="chip chip-y">payment under review</span>
+                ) : (
+                  <span className="chip chip-r">unpaid</span>
+                ))}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {s.status !== "approved" && (
               <button
                 onClick={() => setStatus(s.id, "approved")}
@@ -156,6 +192,16 @@ export default function AdminDashboard() {
 
         {s.status === "approved" && (
           <>
+            <div className="mt-4">
+              <button onClick={() => toggleFree(s)} className="btn-ghost">
+                {s.free_access ? "Remove free access" : "Give free access"}
+              </button>
+              <p className="mu mt-1 text-xs font-bold">
+                Free access keeps lessons and quizzes open without a monthly
+                payment (trial or scholarship).
+              </p>
+            </div>
+
             <form onSubmit={(e) => saveNote(e, s.id)} className="mt-4">
               <label className="lbl">
                 Note for this student (they can read it)
