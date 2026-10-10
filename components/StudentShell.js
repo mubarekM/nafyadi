@@ -25,7 +25,8 @@ export function lvLabel(t, level) {
 
 export function fmtDate(lang, iso) {
   try {
-    return new Date(iso).toLocaleString(lang === "am" ? "am-ET" : "en-US", {
+    const loc = lang === "am" ? "am-ET" : lang === "om" ? "om-ET" : "en-US";
+    return new Date(iso).toLocaleString(loc, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -85,55 +86,91 @@ export default function StudentShell({ children }) {
 
   if (!me) {
     return (
-      <div className="b0 mu flex min-h-dvh items-center justify-center font-bold">
+      <div className="tx flex min-h-dvh items-center justify-center font-bold">
         ...
       </div>
     );
   }
 
+  const name = me.profile.full_name || "";
+
   return (
     <Ctx.Provider value={me}>
       <div className="b0 tx min-h-dvh">
-        <header className="b0 sticky top-0 z-40 border-b" style={line}>
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
-            <Link
-              href="/student"
-              className="pr shrink-0 text-base font-extrabold sm:text-lg"
-            >
-              <span className="hidden min-[420px]:inline">English with </span>
-              Nafyad
-            </Link>
+        {/* Desktop sidebar */}
+        <aside
+          className="b0 fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r lg:flex"
+          style={line}
+        >
+          <Link href="/student" className="px-6 py-6">
+            <p className="pr text-lg font-extrabold">English with Nafyad</p>
+            <p className="mu text-xs font-extrabold uppercase tracking-widest">
+              Student
+            </p>
+          </Link>
 
-            <nav className="hidden gap-1 lg:flex">
-              {NAV.map(([h, k]) => (
-                <Link
-                  key={h}
-                  href={h}
-                  className={`rounded-full px-4 py-2 text-sm font-extrabold ${on(h) ? "grad text-white" : "mu hover:opacity-70"}`}
-                >
-                  {t(k)}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="flex items-center gap-2">
-              <Controls />
-              <button
-                onClick={logout}
-                aria-label={t("logout")}
-                className="cd tx px-3 py-1.5 text-sm font-bold"
-              >
-                <span className="hidden sm:inline">{t("logout")}</span>
-                <span className="sm:hidden">↩</span>
-              </button>
+          <div className="cd mx-4 mb-4 flex items-center gap-3 p-3">
+            <div className="grad flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-extrabold text-white">
+              {name.charAt(0).toUpperCase() || "S"}
             </div>
+            <div className="min-w-0">
+              <p className="truncate font-extrabold">{name}</p>
+              <p className="mu truncate text-xs font-bold">
+                {lvLabel(t, me.profile.english_level)}
+              </p>
+            </div>
+          </div>
+
+          <nav className="flex-1 space-y-1 px-3">
+            {NAV.map(([h, k, icon]) => (
+              <Link
+                key={h}
+                href={h}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 font-extrabold ${
+                  on(h) ? "grad text-white" : "mu hover:opacity-70"
+                }`}
+              >
+                <span className="text-xl">{icon}</span>
+                {t(k)}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="space-y-3 border-t p-4" style={line}>
+            <Controls />
+            <button onClick={logout} className="btn-ghost w-full">
+              {t("logout")}
+            </button>
+          </div>
+        </aside>
+
+        {/* Phone / tablet top bar */}
+        <header
+          className="b0 sticky top-0 z-40 flex items-center justify-between gap-2 border-b px-4 py-3 lg:hidden"
+          style={line}
+        >
+          <Link href="/student" className="pr shrink-0 font-extrabold">
+            <span className="hidden min-[420px]:inline">English with </span>
+            Nafyad
+          </Link>
+          <div className="flex items-center gap-2">
+            <Controls />
+            <button
+              onClick={logout}
+              aria-label={t("logout")}
+              className="cd tx px-3 py-1.5 text-sm font-bold"
+            >
+              <span className="hidden sm:inline">{t("logout")}</span>
+              <span className="sm:hidden">↩</span>
+            </button>
           </div>
         </header>
 
-        <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:pb-12">
-          {children}
+        <main className="px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:ml-64 lg:px-10 lg:pb-12 lg:pt-10">
+          <div className="mx-auto max-w-5xl">{children}</div>
         </main>
 
+        {/* Phone / tablet bottom tabs */}
         <nav
           className="b0 fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t lg:hidden"
           style={{ ...line, paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -142,7 +179,9 @@ export default function StudentShell({ children }) {
             <Link
               key={h}
               href={h}
-              className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-extrabold ${on(h) ? "pr" : "mu"}`}
+              className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-extrabold ${
+                on(h) ? "pr" : "mu"
+              }`}
             >
               <span className="text-xl">{icon}</span>
               <span className="max-w-full truncate px-1">{t(k)}</span>

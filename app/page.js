@@ -49,6 +49,25 @@ const PRICES = [
   ["pOne", 2000],
 ];
 
+// [CEFR badge, level name key, description key, badge background, badge text color]
+const LEVELS = [
+  ["A1", "lvBeginner", "ld1", "#dbeafe", "#1d4ed8"],
+  ["A2", "lvElementary", "ld2", "#dcfce7", "#166534"],
+  ["B1", "lvIntermediate", "ld3", "#fef3c7", "#92400e"],
+  ["B2", "lvUpper", "ld4", "#ede9fe", "#6d28d9"],
+  ["C1+", "lvAdvanced", "ld5", "#fee2e2", "#b91c1c"],
+];
+const SKILLS = [
+  ["sk1", "🗣️"],
+  ["sk2", "👂"],
+  ["sk3", "📖"],
+  ["sk4", "✍️"],
+  ["sk5", "🧩"],
+  ["sk6", "💬"],
+  ["sk7", "🎤"],
+  ["sk8", "📊"],
+];
+
 function Photo({ src, alt, cls }) {
   const [bad, setBad] = useState(false);
   return bad ? (
@@ -82,10 +101,11 @@ export default function Home() {
   const { t } = usePrefs();
   const [menu, setMenu] = useState(false);
   const nav = [
-    ["#about", "about"],
+    ["#learn", "navLearn"],
     ["#programs", "programs"],
     ["#schedule", "schedule"],
     ["#prices", "prices"],
+    ["#about", "about"],
     ["#contact", "contact"],
   ];
   const programs = [
@@ -107,7 +127,7 @@ export default function Home() {
             <span className="hidden min-[400px]:inline">English with </span>
             Nafyad
           </a>
-          <nav className="hidden gap-6 lg:flex">
+          <nav className="hidden gap-6 xl:flex">
             {nav.map(([h, k]) => (
               <a
                 key={h}
@@ -128,14 +148,14 @@ export default function Home() {
             <button
               onClick={() => setMenu(!menu)}
               aria-label="Menu"
-              className="cd px-3 py-1.5 text-lg lg:hidden"
+              className="cd px-3 py-1.5 text-lg xl:hidden"
             >
               {menu ? "✕" : "☰"}
             </button>
           </div>
         </div>
         {menu && (
-          <div className="b0 border-t px-4 pb-5 pt-2 lg:hidden" style={line}>
+          <div className="b0 border-t px-4 pb-5 pt-2 xl:hidden" style={line}>
             {nav.map(([h, k]) => (
               <a
                 key={h}
@@ -218,10 +238,68 @@ export default function Home() {
         </div>
       </section>
 
+      {/* WHAT YOU LEARN */}
+      <section
+        id="learn"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="fluid-h2 font-extrabold">{t("learnT")}</h2>
+          <p className="mu mt-4 text-base font-semibold sm:text-lg">
+            {t("learnD")}
+          </p>
+        </div>
+
+        <div className="cd mx-auto mt-10 max-w-3xl p-2 sm:p-4">
+          {LEVELS.map(([code, nameKey, descKey, bg, fg], i) => (
+            <div
+              key={code}
+              className={`flex items-start gap-4 p-4 sm:gap-5 sm:p-5 ${i > 0 ? "border-t" : ""}`}
+              style={line}
+            >
+              <span
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-extrabold sm:h-14 sm:w-14 sm:text-lg"
+                style={{ background: bg, color: fg }}
+              >
+                {code}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-lg font-extrabold">
+                  {i + 1}. {t(nameKey)}
+                </h3>
+                <p className="mu mt-1 font-semibold leading-relaxed">
+                  {t(descKey)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mu mx-auto mt-4 max-w-3xl text-center text-sm font-bold">
+          {t("cefrNote")}
+        </p>
+
+        <h3 className="mt-14 text-center text-xl font-extrabold">
+          {t("skillsT")}
+        </h3>
+        <div className="mx-auto mt-6 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          {SKILLS.map(([k, icon]) => (
+            <div
+              key={k}
+              className="cd lift flex flex-col items-center gap-2 p-4 text-center"
+            >
+              <span className="text-3xl">{icon}</span>
+              <span className="text-sm font-extrabold sm:text-base">
+                {t(k)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* SCHEDULE */}
       <section
         id="schedule"
-        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+        className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
       >
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div>
@@ -255,7 +333,10 @@ export default function Home() {
       </section>
 
       {/* PRICES */}
-      <section id="prices" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
+      <section
+        id="prices"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
         <h2 className="fluid-h2 text-center font-extrabold">{t("prT")}</h2>
         <p className="mu mt-3 text-center font-semibold">{t("pNote")}</p>
         <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -271,19 +352,25 @@ export default function Home() {
               <p className="mu mt-1 font-bold">
                 {t("etb")} {t("mo")}
               </p>
-              <Link href="/signup" className="btn mt-6">
+              <Link href="/signup" className="btn mt-6 w-full">
                 {t("join")}
               </Link>
+              <p className="mu mt-4 text-sm font-bold">
+                {t("hasAcc")}{" "}
+                <Link
+                  href="/login"
+                  className="pr font-extrabold hover:underline"
+                >
+                  {t("goLogin")}
+                </Link>
+              </p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ABOUT */}
-      <section
-        id="about"
-        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
-      >
+      <section id="about" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
         <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <Photo
             src="/nafyad.jpg"
@@ -302,7 +389,7 @@ export default function Home() {
       {/* CONTACT */}
       <section
         id="contact"
-        className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
       >
         <div className="grad mx-auto max-w-4xl rounded-3xl p-6 text-center text-white sm:p-10">
           <h2 className="fluid-h2 font-extrabold">{t("conT")}</h2>
