@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/lib/prefs";
@@ -33,7 +34,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers>
-          <Backdrop />
+          <Suspense fallback={null}>
+            <Backdrop />
+          </Suspense>
           {children}
         </Providers>
       </body>
