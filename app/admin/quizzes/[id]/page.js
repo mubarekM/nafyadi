@@ -1,125 +1,189 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 function QuizAnswers() {
-  const router = useRouter();
   const params = useParams();
   const quizId = params.id;
 
-  const [quiz, setQuiz] = useState(null);
-  const [answers, setAnswers] = useState([]);
-  const [ready, setReady] = useState(false);
+  const [data, setData] = useState(null);
+  const [edits, setEdits] = useState({});
+  const [savingId, setSavingId] = useState(null);
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    async function start() {
-      const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
+  async function load() {
+    const supabase = createClient();
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("*")
+      .eq("id", quizId)
+      .single();
+    const { data: questions } = await supabase
+      .from("quiz_questions")
+      .select("*")
+      .eq("quiz_id", quizId)
+      .order("position", { ascending: true });
+    const { data: subs } = await supabase
+      .from("quiz_submissions")
+      .select("*")
+      .eq("quiz_id", quizId)
+      .order("submitted_at", { ascending: false });
 
-      if (!userData.user) {
-        router.replace("/admin/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
+    const names = {};
+    const ids = (subs || []).map((s) => s.student_id);
+    if (ids.length) {
+      const { data: profiles } = await supabase
         .from("profiles")
-        .select("role")
-        .eq("id", userData.user.id)
-        .single();
-
-      if (profile?.role !== "admin") {
-        router.replace("/admin/login");
-        return;
-      }
-
-      // Load Quiz details
-      const { data: quizData } = await supabase
-        .from("quizzes")
-        .select("*")
-        .eq("id", quizId)
-        .single();
-
-      setQuiz(quizData);
-
-      // Load Answers submitted by students
-      const { data: answerData } = await supabase
-        .from("quiz_answers")
-        .select("*, profiles(full_name)")
-        .eq("quiz_id", quizId)
-        .order("created_at", { ascending: false });
-
-      setAnswers(answerData || []);
-      setReady(true);
+        .select("id, full_name, english_level")
+        .in("id", ids);
+      (profiles || []).forEach((p) => {
+        names[p.id] = p;
+      });
     }
 
-    start();
-  }, [quizId, router]);
-
-  if (!ready) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-300">
-        Loading...
-      </main>
-    );
+    const initial = {};
+    (subs || []).forEach((s) => {
+      initial[s.id] = { score: s.score || "", feedback: s.feedback || "" };
+    });
+    setEdits(initial);
+    setData({ quiz, questions: questions || [], subs: subs || [], names });
   }
 
-  return (
-    <main className="min-h-screen bg-gray-950 px-4 py-8 text-gray-100">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <Link
-              href="/admin/quizzes"
-              className="text-sm font-semibold text-purple-400 hover:underline"
-            >
-              ← Back to Quizzes
-            </Link>
-            <h1 className="mt-2 text-2xl font-bold text-white">
-              {quiz?.title || "Quiz Answers"}
-            </h1>
-          </div>
-        </div>
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizId]);
 
-        <div className="mt-8 space-y-4">
-          {answers.length === 0 ? (
-            <p className="text-gray-400">
-              No students have taken this quiz yet.
-            </p>
-          ) : (
-            answers.map((ans) => (
-              <div
-                key={ans.id}
-                className="rounded-xl border border-gray-800 bg-gray-900 p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-white">
-                    {ans.profiles?.full_name || "Unknown Student"}
+  const setEdit = (id, field, value) =>
+    setEdits((e) => ({ ...e, [id]: { ...e[id], [field]: value } }));
+
+  async function saveGrade(sub) {
+    const edit = edits[sub.id];
+    if (!edit.score.trim()) {
+      setMessage("Please write a score first, for example 8/10.");
+      return;
+    }
+    setMessage("");
+    setSavingId(sub.id);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("quiz_submissions")
+      .update({
+        score: edit.score.trim(),
+        feedback: edit.feedback.trim() || null,
+        status: "graded",
+        graded_at: new Date().toISOString(),
+      })
+      .eq("id", sub.id);
+    if (error) setMessage("Could not save: " + error.message);
+    else await load();
+    setSavingId(null);
+  }
+
+  if (!data) return <p className="mu font-bold">...</p>;
+
+  const { quiz, questions, subs, names } = data;
+
+  return (
+    <div className="up">
+      <Link
+        href="/admin/quizzes"
+        className="pr text-sm font-extrabold hover:underline"
+      >
+        ← Quizzes
+      </Link>
+      <h1 className="fluid-h2 mt-3 font-extrabold">Answers: {quiz?.title}</h1>
+
+      {message && <p className="err mt-4">{message}</p>}
+
+      <div className="mt-6 space-y-5">
+        {subs.length === 0 && (
+          <p className="mu font-semibold">No student has sent answers yet.</p>
+        )}
+
+        {subs.map((s) => {
+          const student = names[s.student_id];
+          return (
+            <div key={s.id} className="cd p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-extrabold">
+                    {student?.full_name || "Student"}
                   </p>
-                  <span className="text-sm text-gray-400">
-                    Score: {ans.score} / {ans.total}
-                  </span>
+                  <p className="mu text-sm font-bold">
+                    {student?.english_level}
+                  </p>
+                </div>
+                <span
+                  className={`chip ${s.status === "graded" ? "chip-g" : "chip-y"}`}
+                >
+                  {s.status === "graded" ? `graded: ${s.score}` : "to grade"}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {questions.map((q, i) => (
+                  <div
+                    key={q.id}
+                    className="rounded-xl border p-3"
+                    style={{ borderColor: "var(--ln)" }}
+                  >
+                    <p className="mu text-sm font-bold">
+                      {i + 1}. {q.prompt}
+                    </p>
+                    <p className="pr mt-1 font-extrabold">
+                      {s.answers?.[q.id] || "(no answer)"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="lbl">Score</label>
+                  <input
+                    value={edits[s.id]?.score || ""}
+                    onChange={(e) => setEdit(s.id, "score", e.target.value)}
+                    placeholder="8/10"
+                    className="field"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="lbl">Feedback for the student</label>
+                  <textarea
+                    value={edits[s.id]?.feedback || ""}
+                    onChange={(e) => setEdit(s.id, "feedback", e.target.value)}
+                    rows={2}
+                    className="field"
+                  />
                 </div>
               </div>
-            ))
-          )}
-        </div>
+
+              <button
+                onClick={() => saveGrade(s)}
+                disabled={savingId === s.id}
+                className="btn mt-4"
+              >
+                {savingId === s.id
+                  ? "Saving..."
+                  : s.status === "graded"
+                    ? "Update grade"
+                    : "Save grade"}
+              </button>
+            </div>
+          );
+        })}
       </div>
-    </main>
+    </div>
   );
 }
 
 export default function Page() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-300">
-          Loading...
-        </main>
-      }
-    >
+    <Suspense fallback={<p className="mu font-bold">...</p>}>
       <QuizAnswers />
     </Suspense>
   );

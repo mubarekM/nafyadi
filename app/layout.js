@@ -1,5 +1,4 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import { Suspense } from "react";
 import "./globals.css";
 import { Providers } from "@/lib/prefs";
 import Backdrop from "@/components/Backdrop";
@@ -20,6 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
@@ -33,9 +33,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers>
-          <Suspense fallback={null}>
-            <Backdrop />
-          </Suspense>
+          <Backdrop />
           {children}
         </Providers>
       </body>
