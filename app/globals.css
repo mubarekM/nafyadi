@@ -320,3 +320,80 @@ html.dark .chip-r {
   font-size: 0.85rem;
   cursor: pointer;
 }
+
+/* ===== Responsive + print + touch fixes ===== */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+body {
+  overflow-wrap: anywhere;
+}
+.grid > *,
+main {
+  min-width: 0;
+}
+img,
+video,
+iframe,
+audio {
+  max-width: 100%;
+}
+input,
+select,
+textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+input[type="datetime-local"] {
+  min-height: 3rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+.sm,
+.btn-ghost {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.bubble-me {
+  background: linear-gradient(135deg, #1d4ed8, #f97316);
+  color: #fff;
+}
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .cert-page {
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+  .cert-wrap {
+    width: 297mm !important;
+    max-width: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

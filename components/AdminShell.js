@@ -12,6 +12,8 @@ const NAV = [
   ["/admin/lessons", "Lessons", "📚"],
   ["/admin/quizzes", "Quizzes", "📝"],
   ["/admin/live-classes", "Live Classes", "🎥"],
+  ["/admin/certificates", "Certificates", "🎓"],
+  ["/admin/discussion", "Discussion", "💬"],
 ];
 
 export default function AdminShell({ children }) {
@@ -122,7 +124,7 @@ export default function AdminShell({ children }) {
         <div className="mx-auto max-w-5xl">{children}</div>
       </main>
 
-      {/* Phone / tablet bottom tabs (scroll sideways if there are many) */}
+      {/* Phone / tablet bottom tabs (scroll sideways) */}
       <nav
         className="b0 fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t lg:hidden"
         style={{ ...line, paddingBottom: "env(safe-area-inset-bottom)" }}

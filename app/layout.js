@@ -16,6 +16,12 @@ export const metadata = {
     "Speak English with confidence. Live, step-by-step classes with Teacher Nafyad WJ.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0b1220",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html

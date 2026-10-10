@@ -44,6 +44,7 @@ const NAV = [
   ["/student/quizzes", "navQuizzes", "📝"],
   ["/student/progress", "navProgress", "📈"],
   ["/student/live-class", "navLive", "🎥"],
+  ["/student/discussion", "navChat", "💬"],
 ];
 
 export default function StudentShell({ children }) {
@@ -121,7 +122,7 @@ export default function StudentShell({ children }) {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1 px-3">
+          <nav className="flex-1 space-y-1 overflow-y-auto px-3">
             {NAV.map(([h, k, icon]) => (
               <Link
                 key={h}
@@ -172,19 +173,19 @@ export default function StudentShell({ children }) {
 
         {/* Phone / tablet bottom tabs */}
         <nav
-          className="b0 fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t lg:hidden"
+          className="b0 fixed inset-x-0 bottom-0 z-40 flex border-t lg:hidden"
           style={{ ...line, paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           {NAV.map(([h, k, icon]) => (
             <Link
               key={h}
               href={h}
-              className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-extrabold ${
+              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-extrabold ${
                 on(h) ? "pr" : "mu"
               }`}
             >
               <span className="text-xl">{icon}</span>
-              <span className="max-w-full truncate px-1">{t(k)}</span>
+              <span className="w-full truncate px-0.5 text-center">{t(k)}</span>
             </Link>
           ))}
         </nav>

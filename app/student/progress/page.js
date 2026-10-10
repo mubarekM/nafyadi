@@ -7,7 +7,7 @@ import { useStudent } from "@/components/StudentShell";
 
 export default function StudentProgress() {
   const { id, profile } = useStudent();
-  const { t } = usePrefs();
+  const { t, lang } = usePrefs();
   const [info, setInfo] = useState(null);
 
   useEffect(() => {
@@ -35,16 +35,29 @@ export default function StudentProgress() {
         .eq("student_id", id)
         .order("submitted_at", { ascending: false });
 
-      setInfo({ lessons, opened, subs: subs || [] });
+      const { data: certs } = await supabase
+        .from("certificates")
+        .select("*")
+        .eq("student_id", id)
+        .order("issued_at", { ascending: false });
+
+      setInfo({ lessons, opened, subs: subs || [], certs: certs || [] });
     }
     load();
   }, [id, profile.english_level]);
 
   if (!info) return <p className="mu font-bold">...</p>;
 
-  const { lessons, opened, subs } = info;
+  const { lessons, opened, subs, certs } = info;
   const openedCount = lessons.filter((l) => opened.has(l.id)).length;
   const line = { borderColor: "var(--ln)" };
+  const loc = lang === "am" ? "am-ET" : lang === "om" ? "om-ET" : "en-US";
+  const day = (iso) =>
+    new Date(iso).toLocaleDateString(loc, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
   return (
     <div className="up space-y-6">
@@ -55,6 +68,37 @@ export default function StudentProgress() {
         <p className="mu mt-3 whitespace-pre-wrap font-semibold leading-relaxed">
           {profile.teacher_note || t("noNote")}
         </p>
+      </div>
+
+      <div className="cd p-5 sm:p-6">
+        <h2 className="pr font-extrabold">🎓 {t("certsT")}</h2>
+        <div className="mt-3 space-y-3">
+          {certs.length === 0 && (
+            <p className="mu font-semibold">{t("noCerts")}</p>
+          )}
+          {certs.map((c) => (
+            <div
+              key={c.id}
+              className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+              style={line}
+            >
+              <div className="min-w-0">
+                <p className="font-extrabold">{c.title}</p>
+                <p className="mu text-sm font-bold">
+                  {t("issuedOn")} {day(c.issued_at)}
+                </p>
+              </div>
+              <a
+                href={`/certificate/${c.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn sm"
+              >
+                {t("viewCert")}
+              </a>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="cd p-5 sm:p-6">
@@ -106,7 +150,7 @@ export default function StudentProgress() {
               <span className="min-w-0 truncate font-bold">{l.title}</span>
               <span
                 className={`shrink-0 text-sm font-extrabold ${
-                  opened.has(l.id) ? "text-green-600" : "mu"
+                  opened.has(l.id) ? "text-green-500" : "mu"
                 }`}
               >
                 {opened.has(l.id) ? t("opened") : t("notOpened")}
