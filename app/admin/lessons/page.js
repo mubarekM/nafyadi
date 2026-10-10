@@ -15,8 +15,11 @@ const LEVELS = [
 const emptyForm = {
   title: "",
   level: "All levels",
+  week: "1",
+  week_title: "",
   content: "",
   video_url: "",
+  checklist: "",
   file_url: "",
   file_name: "",
   published: false,
@@ -36,7 +39,8 @@ export default function AdminLessons() {
     const { data } = await supabase
       .from("lessons")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("week", { ascending: true })
+      .order("created_at", { ascending: true });
     setLessons(data || []);
   }
 
@@ -44,7 +48,19 @@ export default function AdminLessons() {
     load();
   }, []);
 
-  const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  function update(field, value) {
+    setForm((f) => {
+      const next = { ...f, [field]: value };
+      // When you pick a week that already has a title, reuse it
+      if (field === "week" && !f.week_title.trim()) {
+        const found = (lessons || []).find(
+          (l) => String(l.week) === String(value) && l.week_title,
+        );
+        if (found) next.week_title = found.week_title;
+      }
+      return next;
+    });
+  }
 
   function resetForm() {
     setForm(emptyForm);
@@ -82,8 +98,14 @@ export default function AdminLessons() {
     const row = {
       title: form.title,
       level: form.level,
+      week: Math.max(1, parseInt(form.week, 10) || 1),
+      week_title: form.week_title.trim() || null,
       content: form.content,
       video_url: form.video_url || null,
+      checklist: form.checklist
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
       file_url: fileUrl || null,
       file_name: fileName || null,
       published: form.published,
@@ -107,8 +129,11 @@ export default function AdminLessons() {
     setForm({
       title: l.title,
       level: l.level,
+      week: String(l.week || 1),
+      week_title: l.week_title || "",
       content: l.content || "",
       video_url: l.video_url || "",
+      checklist: (l.checklist || []).join("\n"),
       file_url: l.file_url || "",
       file_name: l.file_name || "",
       published: l.published,
@@ -137,6 +162,20 @@ export default function AdminLessons() {
 
   if (!lessons) return <p className="mu font-bold">...</p>;
 
+  // Group lessons by week for the list below
+  const weeks = [];
+  const byWeek = {};
+  lessons.forEach((l) => {
+    const w = l.week || 1;
+    if (!byWeek[w]) {
+      byWeek[w] = { week: w, title: null, items: [] };
+      weeks.push(byWeek[w]);
+    }
+    if (!byWeek[w].title && l.week_title) byWeek[w].title = l.week_title;
+    byWeek[w].items.push(l);
+  });
+  weeks.sort((a, b) => a.week - b.week);
+
   return (
     <div className="up">
       <h1 className="fluid-h2 font-extrabold">Lessons</h1>
@@ -156,25 +195,47 @@ export default function AdminLessons() {
           />
         </div>
 
-        <div>
-          <label className="lbl">Level</label>
-          <select
-            value={form.level}
-            onChange={(e) => update("level", e.target.value)}
-            className="field"
-          >
-            {LEVELS.map((lv) => (
-              <option key={lv}>{lv}</option>
-            ))}
-          </select>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label className="lbl">Level</label>
+            <select
+              value={form.level}
+              onChange={(e) => update("level", e.target.value)}
+              className="field"
+            >
+              {LEVELS.map((lv) => (
+                <option key={lv}>{lv}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="lbl">Week number</label>
+            <input
+              type="number"
+              min="1"
+              value={form.week}
+              onChange={(e) => update("week", e.target.value)}
+              required
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="lbl">Week title (optional)</label>
+            <input
+              value={form.week_title}
+              onChange={(e) => update("week_title", e.target.value)}
+              placeholder="Example: Greetings and introductions"
+              className="field"
+            />
+          </div>
         </div>
 
         <div>
-          <label className="lbl">Lesson text</label>
+          <label className="lbl">Lesson notes</label>
           <textarea
             value={form.content}
             onChange={(e) => update("content", e.target.value)}
-            rows={8}
+            rows={7}
             className="field"
           />
         </div>
@@ -185,6 +246,21 @@ export default function AdminLessons() {
             value={form.video_url}
             onChange={(e) => update("video_url", e.target.value)}
             placeholder="https://www.youtube.com/watch?v=..."
+            className="field"
+          />
+        </div>
+
+        <div>
+          <label className="lbl">
+            Checklist for students (one item per line, optional)
+          </label>
+          <textarea
+            value={form.checklist}
+            onChange={(e) => update("checklist", e.target.value)}
+            rows={4}
+            placeholder={
+              "Watch the video\nRead the notes\nPractice 10 sentences"
+            }
             className="field"
           />
         </div>
@@ -233,38 +309,57 @@ export default function AdminLessons() {
       <h2 className="pr mt-10 text-lg font-extrabold">
         All lessons ({lessons.length})
       </h2>
-      <div className="mt-3 space-y-3">
-        {lessons.length === 0 && (
-          <p className="mu font-semibold">No lessons yet.</p>
-        )}
-        {lessons.map((l) => (
-          <div
-            key={l.id}
-            className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-lg font-extrabold">{l.title}</p>
-              <p className="mu text-sm font-bold">{l.level}</p>
-              <span
-                className={`chip mt-2 ${l.published ? "chip-g" : "chip-n"}`}
+      {lessons.length === 0 && (
+        <p className="mu mt-3 font-semibold">No lessons yet.</p>
+      )}
+
+      {weeks.map((w) => (
+        <div key={w.week} className="mt-6">
+          <p className="mb-3 font-extrabold">
+            Week {w.week}
+            {w.title ? `: ${w.title}` : ""}
+          </p>
+          <div className="space-y-3">
+            {w.items.map((l) => (
+              <div
+                key={l.id}
+                className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
               >
-                {l.published ? "published" : "draft"}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => toggle(l)} className="btn-ghost">
-                {l.published ? "Unpublish" : "Publish"}
-              </button>
-              <button onClick={() => startEdit(l)} className="btn sm">
-                Edit
-              </button>
-              <button onClick={() => remove(l.id)} className="btn btn-red sm">
-                Delete
-              </button>
-            </div>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-extrabold">{l.title}</p>
+                  <p className="mu text-sm font-bold">{l.level}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span
+                      className={`chip ${l.published ? "chip-g" : "chip-n"}`}
+                    >
+                      {l.published ? "published" : "draft"}
+                    </span>
+                    {(l.checklist || []).length > 0 && (
+                      <span className="chip chip-n">
+                        {l.checklist.length} checklist items
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => toggle(l)} className="btn-ghost">
+                    {l.published ? "Unpublish" : "Publish"}
+                  </button>
+                  <button onClick={() => startEdit(l)} className="btn sm">
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => remove(l.id)}
+                    className="btn btn-red sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

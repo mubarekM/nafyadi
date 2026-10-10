@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePrefs } from "@/lib/prefs";
+import { createClient } from "@/lib/supabase";
 import Controls from "@/components/Controls";
 
 const TG = "https://t.me/NAFYADWJ";
@@ -100,6 +101,8 @@ function Times({ rows }) {
 export default function Home() {
   const { t } = usePrefs();
   const [menu, setMenu] = useState(false);
+  const [enr, setEnr] = useState("idle"); // idle | sending | ok | error
+
   const nav = [
     ["#learn", "navLearn"],
     ["#programs", "programs"],
@@ -114,6 +117,32 @@ export default function Home() {
     ["adults", "adultsD", "/adults.jpg"],
   ];
   const line = { borderColor: "var(--ln)" };
+
+  async function sendEnroll(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+
+    // Hidden trap field: real people never fill it, spam bots often do
+    if (fd.get("website")) {
+      setEnr("ok");
+      return;
+    }
+
+    setEnr("sending");
+    const supabase = createClient();
+    const { error } = await supabase.from("enrollments").insert({
+      full_name: String(fd.get("full_name") || "").trim(),
+      email: String(fd.get("email") || "").trim(),
+      phone: String(fd.get("phone") || "").trim(),
+    });
+    if (error) {
+      setEnr("error");
+      return;
+    }
+    form.reset();
+    setEnr("ok");
+  }
 
   return (
     <main className="b0 tx overflow-x-hidden">
@@ -200,6 +229,12 @@ export default function Home() {
                 {t("cta2")}
               </Link>
             </div>
+            <a
+              href="#enroll"
+              className="pr mt-5 inline-block text-sm font-extrabold hover:underline"
+            >
+              {t("enrollLink")} →
+            </a>
           </div>
           <div className="relative">
             <Photo
@@ -369,8 +404,81 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ENROLL */}
+      <section id="enroll" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
+        <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-2">
+          <div>
+            <h2 className="fluid-h2 font-extrabold">{t("enrollT")}</h2>
+            <p className="mu mt-4 text-base font-semibold leading-relaxed sm:text-lg">
+              {t("enrollD")}
+            </p>
+            <p className="pr mt-4 font-extrabold">✓ {t("enrollNote")}</p>
+          </div>
+
+          <div className="cd p-6 sm:p-8">
+            {enr === "ok" ? (
+              <p className="ok">{t("enrollOk")}</p>
+            ) : (
+              <form onSubmit={sendEnroll} className="space-y-4">
+                <div>
+                  <label className="lbl">{t("fullName")}</label>
+                  <input
+                    name="full_name"
+                    type="text"
+                    required
+                    minLength={2}
+                    maxLength={100}
+                    className="field"
+                  />
+                </div>
+                <div>
+                  <label className="lbl">{t("email")}</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    maxLength={200}
+                    className="field"
+                  />
+                </div>
+                <div>
+                  <label className="lbl">{t("phone")}</label>
+                  <input
+                    name="phone"
+                    type="tel"
+                    required
+                    minLength={5}
+                    maxLength={40}
+                    className="field"
+                  />
+                </div>
+                <input
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  style={{ position: "absolute", left: "-9999px", opacity: 0 }}
+                />
+                {enr === "error" && <p className="err">{t("enrollErr")}</p>}
+                <button
+                  type="submit"
+                  disabled={enr === "sending"}
+                  className="btn w-full"
+                >
+                  {enr === "sending" ? t("wait") : t("enrollBtn")}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ABOUT */}
-      <section id="about" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
+      <section
+        id="about"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
         <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <Photo
             src="/nafyad.jpg"
@@ -389,7 +497,7 @@ export default function Home() {
       {/* CONTACT */}
       <section
         id="contact"
-        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+        className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
       >
         <div className="grad mx-auto max-w-4xl rounded-3xl p-6 text-center text-white sm:p-10">
           <h2 className="fluid-h2 font-extrabold">{t("conT")}</h2>
