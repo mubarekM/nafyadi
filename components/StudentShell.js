@@ -45,6 +45,7 @@ const NAV = [
   ["/student/progress", "navProgress", "📈"],
   ["/student/live-class", "navLive", "🎥"],
   ["/student/discussion", "navChat", "💬"],
+  ["/student/payments", "navPay", "💳"],
 ];
 
 export default function StudentShell({ children }) {
@@ -171,16 +172,16 @@ export default function StudentShell({ children }) {
           <div className="mx-auto max-w-5xl">{children}</div>
         </main>
 
-        {/* Phone / tablet bottom tabs */}
+        {/* Phone / tablet bottom tabs (scroll sideways) */}
         <nav
-          className="b0 fixed inset-x-0 bottom-0 z-40 flex border-t lg:hidden"
+          className="b0 fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t lg:hidden"
           style={{ ...line, paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           {NAV.map(([h, k, icon]) => (
             <Link
               key={h}
               href={h}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-extrabold ${
+              className={`flex min-w-[68px] flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-extrabold ${
                 on(h) ? "pr" : "mu"
               }`}
             >

@@ -11,12 +11,22 @@ const TILES = [
   ["/student/quizzes", "navQuizzes", "dQuizzes", "📝"],
   ["/student/progress", "navProgress", "dProgress", "📈"],
   ["/student/live-class", "navLive", "dLive", "🎥"],
+  ["/student/discussion", "navChat", "dChat", "💬"],
+  ["/student/payments", "navPay", "dPay", "💳"],
 ];
 
 export default function StudentHome() {
   const { id, profile } = useStudent();
   const { t, lang } = usePrefs();
   const [d, setD] = useState(null);
+
+  const loc = lang === "am" ? "am-ET" : lang === "om" ? "om-ET" : "en-US";
+  const today = new Date();
+  const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const monthName = today.toLocaleDateString(loc, {
+    year: "numeric",
+    month: "long",
+  });
 
   useEffect(() => {
     async function load() {
@@ -25,7 +35,7 @@ export default function StudentHome() {
       const mine = (x) =>
         x.level === "All levels" || x.level === profile.english_level;
 
-      const [c, l, v, s] = await Promise.all([
+      const [c, l, v, s, p] = await Promise.all([
         supabase
           .from("live_classes")
           .select("*")
@@ -44,19 +54,31 @@ export default function StudentHome() {
           .eq("student_id", id)
           .order("submitted_at", { ascending: false })
           .limit(3),
+        supabase
+          .from("payments")
+          .select("month, status")
+          .eq("student_id", id)
+          .eq("month", ym),
       ]);
 
       const lessons = (l.data || []).filter(mine);
       const opened = new Set((v.data || []).map((x) => x.lesson_id));
+      const pays = p.data || [];
       setD({
         nextClass: (c.data || []).filter(mine)[0] || null,
         latest: lessons[0] || null,
         total: lessons.length,
         done: lessons.filter((x) => opened.has(x.id)).length,
         subs: s.data || [],
+        pay: pays.some((x) => x.status === "approved")
+          ? "paid"
+          : pays.some((x) => x.status === "pending")
+            ? "review"
+            : "due",
       });
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, profile.english_level]);
 
   const pct = d && d.total ? Math.round((d.done / d.total) * 100) : 0;
@@ -85,7 +107,36 @@ export default function StudentHome() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {d && (
+        <section className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="min-w-0">
+            <p className="font-extrabold">💳 {t("dueTitle")}</p>
+            <span
+              className={`chip mt-2 ${
+                d.pay === "paid"
+                  ? "chip-g"
+                  : d.pay === "review"
+                    ? "chip-y"
+                    : "chip-r"
+              }`}
+            >
+              {d.pay === "paid"
+                ? `${t("duePaid")} ${monthName}`
+                : d.pay === "review"
+                  ? t("dueReview")
+                  : `${t("dueDue")} ${monthName}`}
+            </span>
+          </div>
+          <Link
+            href="/student/payments"
+            className={d.pay === "due" ? "btn sm" : "btn-ghost"}
+          >
+            {d.pay === "due" ? t("payNow") : t("navPay")}
+          </Link>
+        </section>
+      )}
+
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {TILES.map(([href, k, dk, icon]) => (
           <Link key={href} href={href} className="cd lift p-4 sm:p-5">
             <span className="text-3xl">{icon}</span>
@@ -142,7 +193,7 @@ export default function StudentHome() {
             <h2 className="pr font-extrabold">📝 {t("recentQuiz")}</h2>
             <Link
               href="/student/quizzes"
-              className="pr text-sm font-extrabold hover:underline"
+              className="pr shrink-0 text-sm font-extrabold hover:underline"
             >
               {t("viewAll")}
             </Link>
@@ -156,10 +207,10 @@ export default function StudentHome() {
               d.subs.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3"
                   style={{ borderColor: "var(--ln)" }}
                 >
-                  <span className="min-w-0 truncate font-bold">
+                  <span className="min-w-0 flex-1 truncate font-bold">
                     {s.quizzes?.title || "Quiz"}
                   </span>
                   {s.status === "graded" ? (

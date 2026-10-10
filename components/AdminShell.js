@@ -9,6 +9,7 @@ import Controls from "./Controls";
 const NAV = [
   ["/admin/dashboard", "Students", "👥"],
   ["/admin/enrollments", "Enrollments", "📩"],
+  ["/admin/payments", "Payments", "💳"],
   ["/admin/lessons", "Lessons", "📚"],
   ["/admin/quizzes", "Quizzes", "📝"],
   ["/admin/live-classes", "Live Classes", "🎥"],
@@ -21,6 +22,7 @@ export default function AdminShell({ children }) {
   const path = usePathname();
   const isLogin = path === "/admin/login";
   const [ok, setOk] = useState(false);
+  const [badges, setBadges] = useState({});
 
   useEffect(() => {
     if (isLogin) {
@@ -44,6 +46,19 @@ export default function AdminShell({ children }) {
         return;
       }
       setOk(true);
+
+      const pay = await supabase
+        .from("payments")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      const enr = await supabase
+        .from("enrollments")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new");
+      setBadges({
+        "/admin/payments": pay.count || 0,
+        "/admin/enrollments": enr.count || 0,
+      });
     }
     start();
   }, [path, isLogin, router]);
@@ -92,6 +107,11 @@ export default function AdminShell({ children }) {
             >
               <span className="text-xl">{icon}</span>
               {label}
+              {badges[h] > 0 && (
+                <span className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">
+                  {badges[h]}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -137,7 +157,14 @@ export default function AdminShell({ children }) {
               on(h) ? "pr" : "mu"
             }`}
           >
-            <span className="text-xl">{icon}</span>
+            <span className="relative text-xl">
+              {icon}
+              {badges[h] > 0 && (
+                <span className="absolute -right-3 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 text-white">
+                  {badges[h]}
+                </span>
+              )}
+            </span>
             <span className="max-w-full truncate px-1">{label}</span>
           </Link>
         ))}
