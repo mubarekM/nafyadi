@@ -66,19 +66,22 @@ export default function StudentLessons() {
     load();
   }, [id, profile.english_level, access]);
 
-  async function onToggle(e, l) {
+  async function markOpened(l) {
+    if (opened.has(l.id)) return;
+    setOpened((prev) => new Set(prev).add(l.id));
+    const supabase = createClient();
+    await supabase
+      .from("lesson_views")
+      .upsert(
+        { student_id: id, lesson_id: l.id },
+        { onConflict: "student_id,lesson_id", ignoreDuplicates: true },
+      );
+  }
+
+  function onSection(e, l, sec) {
     const open = e.currentTarget.open;
-    setShown((s) => ({ ...s, [l.id]: open }));
-    if (open && !opened.has(l.id)) {
-      setOpened((prev) => new Set(prev).add(l.id));
-      const supabase = createClient();
-      await supabase
-        .from("lesson_views")
-        .upsert(
-          { student_id: id, lesson_id: l.id },
-          { onConflict: "student_id,lesson_id", ignoreDuplicates: true },
-        );
-    }
+    setShown((s) => ({ ...s, [`${l.id}:${sec}`]: open }));
+    if (open) markOpened(l);
   }
 
   async function toggleCheck(l, idx) {
@@ -102,7 +105,7 @@ export default function StudentLessons() {
   if (!access) return <LockedCard />;
   if (!lessons) return <p className="mu font-bold">...</p>;
 
-  // Group lessons by week
+  // Group by week
   const weeks = [];
   const byWeek = {};
   lessons.forEach((l) => {
@@ -116,6 +119,10 @@ export default function StudentLessons() {
   });
   weeks.sort((a, b) => a.week - b.week);
 
+  const doneCount = lessons.filter((l) => opened.has(l.id)).length;
+  const pct = lessons.length
+    ? Math.round((doneCount / lessons.length) * 100)
+    : 0;
   const line = { borderColor: "var(--ln)" };
 
   function renderLesson(l) {
@@ -123,128 +130,168 @@ export default function StudentLessons() {
     const list = l.checklist || [];
     const done = (checks[l.id] || []).filter((i) => i < list.length).length;
 
+    const sections = [];
+    if (embed) sections.push(["video", "🎬", t("secVideo")]);
+    if (l.content) sections.push(["notes", "📝", t("secNotes")]);
+    if (l.file_url) sections.push(["file", "📎", t("secFiles")]);
+    if (list.length > 0)
+      sections.push([
+        "check",
+        "✅",
+        `${t("secCheck")} (${done}/${list.length})`,
+      ]);
+
     return (
-      <details
-        key={l.id}
-        onToggle={(e) => onToggle(e, l)}
-        className="group/lesson rounded-xl border"
-        style={line}
-      >
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-          <div className="min-w-0">
-            <p className="truncate font-extrabold">{l.title}</p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <span className="chip chip-n">{lvLabel(t, l.level)}</span>
-              {opened.has(l.id) && (
-                <span className="chip chip-g">{t("opened")}</span>
-              )}
-              {list.length > 0 && (
-                <span className="chip chip-n">
-                  {done}/{list.length} ✓
-                </span>
-              )}
-            </div>
-          </div>
-          <span className="pr text-xl transition-transform group-open/lesson:rotate-180">
-            ⌄
-          </span>
-        </summary>
+      <div key={l.id} className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-extrabold">{l.title}</p>
+          <span className="chip chip-n">{lvLabel(t, l.level)}</span>
+          {opened.has(l.id) && (
+            <span className="chip chip-g">{t("opened")}</span>
+          )}
+        </div>
 
-        {shown[l.id] && (
-          <div className="space-y-4 border-t p-4" style={line}>
-            {embed && (
-              <div className="aspect-video overflow-hidden rounded-2xl bg-black">
-                <iframe
-                  src={embed}
-                  title={l.title}
-                  className="h-full w-full"
-                  allowFullScreen
-                />
-              </div>
-            )}
+        {sections.map(([key, icon, label]) => (
+          <details
+            key={key}
+            onToggle={(e) => onSection(e, l, key)}
+            className="group/sec rounded-xl border"
+            style={line}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-extrabold [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0 break-words">
+                {icon} {label}
+              </span>
+              <span className="pr text-xl transition-transform group-open/sec:rotate-180">
+                ⌄
+              </span>
+            </summary>
 
-            {l.content && (
-              <div>
-                <p className="pr mb-2 font-extrabold">📝 {t("notesT")}</p>
-                <div className="whitespace-pre-wrap font-semibold leading-relaxed">
-                  {l.content}
-                </div>
-              </div>
-            )}
+            {shown[`${l.id}:${key}`] && (
+              <div className="border-t p-4" style={line}>
+                {key === "video" && (
+                  <div className="aspect-video overflow-hidden rounded-2xl bg-black">
+                    <iframe
+                      src={embed}
+                      title={l.title}
+                      className="h-full w-full"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
 
-            {l.file_url && (
-              <div>
-                <p className="pr mb-2 break-words font-extrabold">
-                  📎 {l.file_name || t("lessonFile")}
-                </p>
-                {isAudio(l.file_name) ? (
-                  <audio controls src={l.file_url} className="w-full" />
-                ) : (
-                  <a
-                    href={l.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn sm"
-                  >
-                    {t("openFile")}
-                  </a>
+                {key === "notes" && (
+                  <div className="whitespace-pre-wrap font-semibold leading-relaxed">
+                    {l.content}
+                  </div>
+                )}
+
+                {key === "file" && (
+                  <div>
+                    <p className="pr mb-2 break-words font-extrabold">
+                      {l.file_name || t("lessonFile")}
+                    </p>
+                    {isAudio(l.file_name) ? (
+                      <audio controls src={l.file_url} className="w-full" />
+                    ) : (
+                      <a
+                        href={l.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn sm"
+                      >
+                        {t("openFile")}
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {key === "check" && (
+                  <div className="space-y-2">
+                    {list.map((item, idx) => {
+                      const on = (checks[l.id] || []).includes(idx);
+                      return (
+                        <label
+                          key={idx}
+                          className="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 font-bold"
+                          style={{
+                            borderColor: on ? "var(--pri)" : "var(--ln)",
+                            background: on ? "var(--soft)" : "transparent",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleCheck(l, idx)}
+                          />
+                          <span
+                            className={`min-w-0 break-words ${on ? "line-through opacity-70" : ""}`}
+                          >
+                            {item}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
-
-            {list.length > 0 && (
-              <div>
-                <p className="pr mb-2 font-extrabold">✅ {t("chkT")}</p>
-                <div className="space-y-2">
-                  {list.map((item, idx) => {
-                    const on = (checks[l.id] || []).includes(idx);
-                    return (
-                      <label
-                        key={idx}
-                        className="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 font-bold"
-                        style={{
-                          borderColor: on ? "var(--pri)" : "var(--ln)",
-                          background: on ? "var(--soft)" : "transparent",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() => toggleCheck(l, idx)}
-                        />
-                        <span
-                          className={`min-w-0 break-words ${on ? "line-through opacity-70" : ""}`}
-                        >
-                          {item}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </details>
+          </details>
+        ))}
+      </div>
     );
   }
 
   return (
-    <div className="up">
+    <div className="up space-y-5">
       <h1 className="fluid-h2 font-extrabold">{t("yourLessons")}</h1>
 
-      <div className="mt-6 space-y-4">
-        {weeks.length === 0 && (
-          <p className="mu font-semibold">{t("noLessonsYet")}</p>
-        )}
+      <div className="cd flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+        <div className="grad flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl">
+          🎓
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xl font-extrabold">{t("courseName")}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="chip chip-g">{t("activeT")}</span>
+            <span className="chip chip-n">
+              {lvLabel(t, profile.english_level)}
+            </span>
+            <span className="chip chip-n">
+              {weeks.length} {t("weeksCount")}
+            </span>
+          </div>
+          <div
+            className="mt-3 h-2.5 w-full overflow-hidden rounded-full"
+            style={{ background: "var(--soft)" }}
+          >
+            <div
+              className="grad h-full rounded-full"
+              style={{ width: pct + "%" }}
+            />
+          </div>
+          <p className="mu mt-1 text-xs font-bold">
+            {doneCount} {t("of")} {lessons.length}
+          </p>
+        </div>
+      </div>
 
+      {weeks.length === 0 && (
+        <p className="mu font-semibold">{t("noLessonsYet")}</p>
+      )}
+
+      <div className="space-y-4">
         {weeks.map((w, wi) => {
           const count = w.items.filter((l) => opened.has(l.id)).length;
           return (
-            <details key={w.week} open={wi === 0} className="cd group/week">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+            <details
+              key={w.week}
+              open={wi === 0}
+              className="cd group/week overflow-hidden"
+            >
+              <summary className="week-h flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0">
-                  <p className="pr text-lg font-extrabold">
+                  <p className="text-lg font-extrabold">
                     {t("week")} {w.week}
                     {w.title ? `: ${w.title}` : ""}
                   </p>
@@ -256,8 +303,8 @@ export default function StudentLessons() {
                   ⌄
                 </span>
               </summary>
-              <div className="space-y-3 border-t p-3 sm:p-4" style={line}>
-                {w.items.map((l) => renderLesson(l))}
+              <div className="space-y-5 p-4 sm:p-5">
+                {w.items.map(renderLesson)}
               </div>
             </details>
           );

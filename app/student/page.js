@@ -6,17 +6,8 @@ import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import { useStudent, lvLabel, fmtDate } from "@/components/StudentShell";
 
-const TILES = [
-  ["/student/lessons", "navLessons", "dLessons", "📚"],
-  ["/student/quizzes", "navQuizzes", "dQuizzes", "📝"],
-  ["/student/progress", "navProgress", "dProgress", "📈"],
-  ["/student/live-class", "navLive", "dLive", "🎥"],
-  ["/student/discussion", "navChat", "dChat", "💬"],
-  ["/student/payments", "navPay", "dPay", "💳"],
-];
-
 export default function StudentHome() {
-  const { id, profile } = useStudent();
+  const { id, profile, access } = useStudent();
   const { t, lang } = usePrefs();
   const [d, setD] = useState(null);
 
@@ -35,7 +26,7 @@ export default function StudentHome() {
       const mine = (x) =>
         x.level === "All levels" || x.level === profile.english_level;
 
-      const [c, l, v, s, p] = await Promise.all([
+      const [c, l, v, q, s, p] = await Promise.all([
         supabase
           .from("live_classes")
           .select("*")
@@ -44,16 +35,17 @@ export default function StudentHome() {
           .limit(20),
         supabase
           .from("lessons")
-          .select("id, title, level")
+          .select("id, title, level, week, week_title")
           .eq("published", true)
-          .order("created_at", { ascending: false }),
+          .order("week", { ascending: true })
+          .order("created_at", { ascending: true }),
         supabase.from("lesson_views").select("lesson_id").eq("student_id", id),
+        supabase.from("quizzes").select("id, level").eq("published", true),
         supabase
           .from("quiz_submissions")
           .select("*, quizzes(title)")
           .eq("student_id", id)
-          .order("submitted_at", { ascending: false })
-          .limit(3),
+          .order("submitted_at", { ascending: false }),
         supabase
           .from("payments")
           .select("month, status")
@@ -63,13 +55,18 @@ export default function StudentHome() {
 
       const lessons = (l.data || []).filter(mine);
       const opened = new Set((v.data || []).map((x) => x.lesson_id));
+      const subs = s.data || [];
+      const doneQuiz = new Set(subs.map((x) => x.quiz_id));
+      const quizzes = (q.data || []).filter(mine);
       const pays = p.data || [];
+
       setD({
         nextClass: (c.data || []).filter(mine)[0] || null,
-        latest: lessons[0] || null,
+        next: lessons.find((x) => !opened.has(x.id)) || null,
         total: lessons.length,
         done: lessons.filter((x) => opened.has(x.id)).length,
-        subs: s.data || [],
+        todo: quizzes.filter((x) => !doneQuiz.has(x.id)).length,
+        subs: subs.slice(0, 3),
         pay: pays.some((x) => x.status === "approved")
           ? "paid"
           : pays.some((x) => x.status === "pending")
@@ -84,10 +81,13 @@ export default function StudentHome() {
   const pct = d && d.total ? Math.round((d.done / d.total) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Greeting */}
       <section className="grad up rounded-3xl p-6 text-white sm:p-8">
         <p className="text-sm font-bold text-white/80">{t("welcome")}</p>
-        <h1 className="fluid-h2 mt-1 font-extrabold">{profile.full_name}</h1>
+        <h2 className="mt-1 break-words text-3xl font-extrabold sm:text-4xl">
+          {profile.full_name}
+        </h2>
         <p className="mt-3 inline-block rounded-full bg-white/20 px-3 py-1 text-sm font-extrabold">
           {t("levelIs")}: {lvLabel(t, profile.english_level)}
         </p>
@@ -107,48 +107,46 @@ export default function StudentHome() {
         </div>
       </section>
 
-      {d && (
-        <section className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="min-w-0">
-            <p className="font-extrabold">💳 {t("dueTitle")}</p>
-            <span
-              className={`chip mt-2 ${
-                d.pay === "paid"
-                  ? "chip-g"
-                  : d.pay === "review"
-                    ? "chip-y"
-                    : "chip-r"
-              }`}
-            >
-              {d.pay === "paid"
-                ? `${t("duePaid")} ${monthName}`
-                : d.pay === "review"
-                  ? t("dueReview")
-                  : `${t("dueDue")} ${monthName}`}
-            </span>
-          </div>
-          <Link
-            href="/student/payments"
-            className={d.pay === "due" ? "btn sm" : "btn-ghost"}
-          >
-            {d.pay === "due" ? t("payNow") : t("navPay")}
-          </Link>
-        </section>
-      )}
-
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        {TILES.map(([href, k, dk, icon]) => (
-          <Link key={href} href={href} className="cd lift p-4 sm:p-5">
-            <span className="text-3xl">{icon}</span>
-            <p className="mt-3 font-extrabold">{t(k)}</p>
-            <p className="mu mt-1 text-sm font-semibold">{t(dk)}</p>
-          </Link>
-        ))}
-      </section>
-
-      <section className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
+        {/* Payment */}
         <div className="cd p-5 sm:p-6">
-          <h2 className="pr font-extrabold">🔴 {t("nextClass")}</h2>
+          <h3 className="pr font-extrabold">💳 {t("dueTitle")}</h3>
+          {!d ? (
+            <p className="mu mt-3 font-semibold">...</p>
+          ) : (
+            <>
+              <span
+                className={`chip mt-3 ${
+                  d.pay === "paid"
+                    ? "chip-g"
+                    : d.pay === "review"
+                      ? "chip-y"
+                      : "chip-r"
+                }`}
+              >
+                {d.pay === "paid"
+                  ? `${t("duePaid")} ${monthName}`
+                  : d.pay === "review"
+                    ? t("dueReview")
+                    : `${t("dueDue")} ${monthName}`}
+              </span>
+              <div className="mt-4">
+                <Link
+                  href="/student/payments"
+                  className={
+                    d.pay === "due" ? "btn sm" : "btn-ghost inline-block"
+                  }
+                >
+                  {d.pay === "due" ? t("payNow") : t("navPay")}
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Next live class */}
+        <div className="cd p-5 sm:p-6">
+          <h3 className="pr font-extrabold">🔴 {t("nextClass")}</h3>
           {!d ? (
             <p className="mu mt-3 font-semibold">...</p>
           ) : d.nextClass ? (
@@ -161,7 +159,7 @@ export default function StudentHome() {
                 href={d.nextClass.meeting_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn mt-4"
+                className="btn sm mt-4"
               >
                 {t("joinClass")}
               </a>
@@ -171,26 +169,35 @@ export default function StudentHome() {
           )}
         </div>
 
+        {/* Continue learning */}
         <div className="cd p-5 sm:p-6">
-          <h2 className="pr font-extrabold">📚 {t("latestLesson")}</h2>
+          <h3 className="pr font-extrabold">📚 {t("contT")}</h3>
           {!d ? (
             <p className="mu mt-3 font-semibold">...</p>
-          ) : d.latest ? (
+          ) : !access ? (
+            <p className="mu mt-3 font-semibold">{t("contLocked")}</p>
+          ) : d.next ? (
             <>
-              <p className="mt-3 text-lg font-extrabold">{d.latest.title}</p>
-              <p className="mu mt-1 font-bold">{lvLabel(t, d.latest.level)}</p>
-              <Link href="/student/lessons" className="btn mt-4">
+              <p className="mu mt-3 text-sm font-bold">
+                {t("week")} {d.next.week || 1}
+                {d.next.week_title ? `: ${d.next.week_title}` : ""}
+              </p>
+              <p className="text-lg font-extrabold">{d.next.title}</p>
+              <Link href="/student/lessons" className="btn sm mt-4">
                 {t("openLesson")}
               </Link>
             </>
+          ) : d.total > 0 ? (
+            <p className="mt-3 font-extrabold">{t("contAll")}</p>
           ) : (
             <p className="mu mt-3 font-semibold">{t("noLessonsYet")}</p>
           )}
         </div>
 
+        {/* Quizzes */}
         <div className="cd p-5 sm:p-6">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="pr font-extrabold">📝 {t("recentQuiz")}</h2>
+            <h3 className="pr font-extrabold">📝 {t("navQuizzes")}</h3>
             <Link
               href="/student/quizzes"
               className="pr shrink-0 text-sm font-extrabold hover:underline"
@@ -198,41 +205,45 @@ export default function StudentHome() {
               {t("viewAll")}
             </Link>
           </div>
-          <div className="mt-3 space-y-2">
-            {!d ? (
-              <p className="mu font-semibold">...</p>
-            ) : d.subs.length === 0 ? (
-              <p className="mu font-semibold">{t("noQuizYet")}</p>
-            ) : (
-              d.subs.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3"
-                  style={{ borderColor: "var(--ln)" }}
-                >
-                  <span className="min-w-0 flex-1 truncate font-bold">
-                    {s.quizzes?.title || "Quiz"}
-                  </span>
-                  {s.status === "graded" ? (
-                    <span className="ok !px-3 !py-1 text-sm">{s.score}</span>
-                  ) : (
-                    <span className="pill mu text-xs font-extrabold">
-                      {t("waitingTeacher")}
+          {!d ? (
+            <p className="mu mt-3 font-semibold">...</p>
+          ) : (
+            <>
+              <p className="mt-3 font-extrabold">
+                {d.todo > 0 ? `${d.todo} ${t("quizTodo")}` : t("quizAllDone")}
+              </p>
+              <div className="mt-3 space-y-2">
+                {d.subs.map((x) => (
+                  <div
+                    key={x.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3"
+                    style={{ borderColor: "var(--ln)" }}
+                  >
+                    <span className="min-w-0 flex-1 truncate font-bold">
+                      {x.quizzes?.title || "Quiz"}
                     </span>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+                    {x.status === "graded" ? (
+                      <span className="ok !px-3 !py-1 text-sm">{x.score}</span>
+                    ) : (
+                      <span className="pill mu text-xs font-extrabold">
+                        {t("waitingTeacher")}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
+      </div>
 
-        <div className="cd p-5 sm:p-6">
-          <h2 className="pr font-extrabold">💬 {t("noteTitle")}</h2>
-          <p className="mu mt-3 whitespace-pre-wrap font-semibold leading-relaxed">
-            {profile.teacher_note || t("noNote")}
-          </p>
-        </div>
-      </section>
+      {/* Teacher's note */}
+      <div className="cd p-5 sm:p-6">
+        <h3 className="pr font-extrabold">💬 {t("noteTitle")}</h3>
+        <p className="mu mt-3 whitespace-pre-wrap font-semibold leading-relaxed">
+          {profile.teacher_note || t("noNote")}
+        </p>
+      </div>
     </div>
   );
 }

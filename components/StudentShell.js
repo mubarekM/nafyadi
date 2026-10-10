@@ -1,11 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
-import Controls from "./Controls";
+import AppShell from "./AppShell";
 
 const Ctx = createContext(null);
 export const useStudent = () => useContext(Ctx);
@@ -38,15 +37,17 @@ export function fmtDate(lang, iso) {
   }
 }
 
-const NAV = [
-  ["/student", "navHome", "🏠"],
-  ["/student/lessons", "navLessons", "📚"],
-  ["/student/quizzes", "navQuizzes", "📝"],
-  ["/student/progress", "navProgress", "📈"],
-  ["/student/live-class", "navLive", "🎥"],
-  ["/student/discussion", "navChat", "💬"],
-  ["/student/payments", "navPay", "💳"],
-];
+// path -> [breadcrumb keys, subtitle key]
+const PAGES = {
+  "/student": { c: [], s: "subHome" },
+  "/student/lessons": { c: ["navCourse", "navLessons"], s: "subLessons" },
+  "/student/quizzes": { c: ["navCourse", "navQuizzes"], s: "subQuizzes" },
+  "/student/progress": { c: ["navCourse", "navProgress"], s: "subProgress" },
+  "/student/live-class": { c: ["navSessions"], s: "subSessions" },
+  "/student/certificates": { c: ["navCerts"], s: "subCerts" },
+  "/student/payments": { c: ["navPay"], s: "subPay" },
+  "/student/discussion": { c: ["navChat"], s: "subChat" },
+};
 
 export default function StudentShell({ children }) {
   const router = useRouter();
@@ -73,8 +74,8 @@ export default function StudentShell({ children }) {
         return;
       }
 
-      // Is the student allowed to open lessons and quizzes right now?
-      // If the check itself fails, we do not lock anyone by mistake.
+      // Can the student open lessons and quizzes right now?
+      // If the check itself fails, nobody is locked out by mistake.
       const { data: acc } = await supabase.rpc("has_access");
 
       setMe({ id: userData.user.id, profile: data, access: acc !== false });
@@ -88,9 +89,6 @@ export default function StudentShell({ children }) {
     router.replace("/login");
   }
 
-  const on = (h) => (h === "/student" ? path === h : path.startsWith(h));
-  const line = { borderColor: "var(--ln)" };
-
   if (!me) {
     return (
       <div className="tx flex min-h-dvh items-center justify-center font-bold">
@@ -99,103 +97,77 @@ export default function StudentShell({ children }) {
     );
   }
 
-  const name = me.profile.full_name || "";
+  const groups = [
+    {
+      key: "home",
+      label: t("navHome"),
+      icon: "🏠",
+      href: "/student",
+      exact: true,
+    },
+    {
+      key: "course",
+      label: t("navCourse"),
+      icon: "📚",
+      children: [
+        { href: "/student/lessons", label: t("navLessons"), icon: "📚" },
+        { href: "/student/quizzes", label: t("navQuizzes"), icon: "📝" },
+        { href: "/student/progress", label: t("navProgress"), icon: "📈" },
+      ],
+    },
+    {
+      key: "sessions",
+      label: t("navSessions"),
+      icon: "🎥",
+      href: "/student/live-class",
+    },
+    {
+      key: "certs",
+      label: t("navCerts"),
+      icon: "🎓",
+      href: "/student/certificates",
+    },
+    { key: "pay", label: t("navPay"), icon: "💳", href: "/student/payments" },
+    {
+      key: "chat",
+      label: t("navChat"),
+      icon: "💬",
+      href: "/student/discussion",
+    },
+  ];
+
+  const tabs = [
+    { href: "/student", exact: true, icon: "🏠", label: t("navHome") },
+    { href: "/student/lessons", icon: "📚", label: t("navLessons") },
+    { href: "/student/quizzes", icon: "📝", label: t("navQuizzes") },
+    { href: "/student/live-class", icon: "🎥", label: t("navSessions") },
+  ];
+
+  const page = PAGES[path] || PAGES["/student"];
 
   return (
     <Ctx.Provider value={me}>
-      <div className="b0 tx min-h-dvh">
-        {/* Desktop sidebar */}
-        <aside
-          className="b0 fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r lg:flex"
-          style={line}
-        >
-          <Link href="/student" className="px-6 py-6">
-            <p className="pr text-lg font-extrabold">English with Nafyad</p>
-            <p className="mu text-xs font-extrabold uppercase tracking-widest">
-              Student
-            </p>
-          </Link>
-
-          <div className="cd mx-4 mb-4 flex items-center gap-3 p-3">
-            <div className="grad flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-extrabold text-white">
-              {name.charAt(0).toUpperCase() || "S"}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate font-extrabold">{name}</p>
-              <p className="mu truncate text-xs font-bold">
-                {lvLabel(t, me.profile.english_level)}
-              </p>
-            </div>
-          </div>
-
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3">
-            {NAV.map(([h, k, icon]) => (
-              <Link
-                key={h}
-                href={h}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 font-extrabold ${
-                  on(h) ? "grad text-white" : "mu hover:opacity-70"
-                }`}
-              >
-                <span className="text-xl">{icon}</span>
-                {t(k)}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="space-y-3 border-t p-4" style={line}>
-            <Controls />
-            <button onClick={logout} className="btn-ghost w-full">
-              {t("logout")}
-            </button>
-          </div>
-        </aside>
-
-        {/* Phone / tablet top bar */}
-        <header
-          className="b0 sticky top-0 z-40 flex items-center justify-between gap-2 border-b px-4 py-3 lg:hidden"
-          style={line}
-        >
-          <Link href="/student" className="pr shrink-0 font-extrabold">
-            <span className="hidden min-[420px]:inline">English with </span>
-            Nafyad
-          </Link>
-          <div className="flex items-center gap-2">
-            <Controls />
-            <button
-              onClick={logout}
-              aria-label={t("logout")}
-              className="cd tx px-3 py-1.5 text-sm font-bold"
-            >
-              <span className="hidden sm:inline">{t("logout")}</span>
-              <span className="sm:hidden">↩</span>
-            </button>
-          </div>
-        </header>
-
-        <main className="px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:ml-64 lg:px-10 lg:pb-12 lg:pt-10">
-          <div className="mx-auto max-w-5xl">{children}</div>
-        </main>
-
-        {/* Phone / tablet bottom tabs (scroll sideways) */}
-        <nav
-          className="b0 fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t lg:hidden"
-          style={{ ...line, paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          {NAV.map(([h, k, icon]) => (
-            <Link
-              key={h}
-              href={h}
-              className={`flex min-w-[68px] flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-extrabold ${
-                on(h) ? "pr" : "mu"
-              }`}
-            >
-              <span className="text-xl">{icon}</span>
-              <span className="w-full truncate px-0.5 text-center">{t(k)}</span>
-            </Link>
-          ))}
-        </nav>
-      </div>
+      <AppShell
+        brand="English with Nafyad"
+        tag="Student"
+        groups={groups}
+        tabs={tabs}
+        user={{
+          name: me.profile.full_name || "",
+          sub: lvLabel(t, me.profile.english_level),
+        }}
+        crumbs={[t("crumbHome"), ...page.c.map((k) => t(k))]}
+        chip={t(page.s)}
+        moreLabel={t("navMore")}
+        logoutLabel={t("logout")}
+        onLogout={logout}
+        footer={[
+          [t("footWeb"), "/", false],
+          [t("footTg"), "https://t.me/NAFYADWJ", true],
+        ]}
+      >
+        {children}
+      </AppShell>
     </Ctx.Provider>
   );
 }

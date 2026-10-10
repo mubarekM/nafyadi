@@ -397,3 +397,17 @@ a {
     print-color-adjust: exact;
   }
 }
+
+/* ===== Dashboard look ===== */
+.week-h {
+  background: rgba(249, 115, 22, 0.16);
+  border-left: 4px solid var(--acc);
+  border-radius: 0.9rem;
+}
+.shell-footer {
+  background: #0b1220;
+  color: #cbd5e1;
+}
+.shell-body h1.fluid-h2 {
+  font-size: clamp(1.4rem, 3.6vw, 1.9rem);
+}

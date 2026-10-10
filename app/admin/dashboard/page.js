@@ -5,6 +5,24 @@ import { createClient } from "@/lib/supabase";
 
 const BADGE = { pending: "chip-y", approved: "chip-g", rejected: "chip-r" };
 
+// Turn a local Ethiopian number (0912...) into international form (251912...)
+function intl(phone) {
+  const d = String(phone || "").replace(/\D/g, "");
+  if (d.startsWith("251")) return d;
+  if (d.startsWith("0")) return "251" + d.slice(1);
+  if (d.length === 9) return "251" + d;
+  return d;
+}
+
+function reminderText(name, month) {
+  return (
+    `Hello ${name}, this is Teacher Nafyad. Your payment for ${month} is not confirmed yet. ` +
+    `Please send your payment screenshot on the website (Payments page). Thank you!\n\n` +
+    `ሰላም ${name}፣ እኔ መምህር ናፍያድ ነኝ። የ${month} ክፍያዎ እስካሁን አልተረጋገጠም። ` +
+    `እባክዎ በድረ ገጹ (የክፍያ ገጽ) የክፍያ ስክሪንሾት ይላኩ። እናመሰግናለን!`
+  );
+}
+
 export default function AdminDashboard() {
   const [students, setStudents] = useState(null);
   const [opened, setOpened] = useState({});
@@ -13,6 +31,12 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [savedId, setSavedId] = useState(null);
   const [reset, setReset] = useState(null);
+  const [toast, setToast] = useState("");
+
+  const monthLabel = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+  });
 
   async function load() {
     const supabase = createClient();
@@ -32,7 +56,6 @@ export default function AdminDashboard() {
     });
     setOpened(counts);
 
-    // Payment status for the current month
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const { data: pays } = await supabase
@@ -61,6 +84,11 @@ export default function AdminDashboard() {
     load();
   }, []);
 
+  function say(text) {
+    setToast(text);
+    setTimeout(() => setToast(""), 4000);
+  }
+
   async function setStatus(id, status) {
     const supabase = createClient();
     await supabase.from("profiles").update({ status }).eq("id", id);
@@ -73,6 +101,15 @@ export default function AdminDashboard() {
       .from("profiles")
       .update({ free_access: !s.free_access })
       .eq("id", s.id);
+    await load();
+  }
+
+  async function setGroup(id, value) {
+    const supabase = createClient();
+    await supabase
+      .from("profiles")
+      .update({ study_group: value ? Number(value) : null })
+      .eq("id", id);
     await load();
   }
 
@@ -121,6 +158,20 @@ export default function AdminDashboard() {
     }
   }
 
+  function copyReminder(s) {
+    const text = reminderText(s.full_name, monthLabel);
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() =>
+          say(
+            `Message copied for ${s.full_name}. Paste it in Telegram and send.`,
+          ),
+        )
+        .catch(() => {});
+    }
+  }
+
   if (!students) return <p className="mu font-bold">...</p>;
 
   const term = search.trim().toLowerCase();
@@ -142,6 +193,14 @@ export default function AdminDashboard() {
 
   function studentCard(s) {
     const pay = payMap[s.id];
+    const unpaid =
+      s.status === "approved" &&
+      !s.free_access &&
+      pay !== "paid" &&
+      pay !== "review";
+    const num = intl(s.phone);
+    const msg = reminderText(s.full_name, monthLabel);
+
     return (
       <div key={s.id} className="cd p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -158,6 +217,9 @@ export default function AdminDashboard() {
               <span className="chip chip-n">
                 {opened[s.id] || 0} lessons opened
               </span>
+              {s.study_group && (
+                <span className="chip chip-n">Group {s.study_group}</span>
+              )}
               {s.status === "approved" &&
                 (s.free_access ? (
                   <span className="chip chip-n">free access</span>
@@ -190,16 +252,65 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {unpaid && (
+          <div className="mt-4">
+            <p className="lbl">Payment reminder for {monthLabel}</p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`https://t.me/+${num}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => copyReminder(s)}
+                className="btn sm"
+              >
+                ✈️ Telegram
+              </a>
+              <a
+                href={`https://wa.me/${num}?text=${encodeURIComponent(msg)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost inline-block"
+              >
+                WhatsApp
+              </a>
+              <a href={`tel:+${num}`} className="btn-ghost inline-block">
+                Call
+              </a>
+            </div>
+            <p className="mu mt-1 text-xs font-bold">
+              Telegram copies the message, then opens the chat: paste and send.
+              If the chat does not open, the student&apos;s privacy settings may
+              block it, so use WhatsApp or Call.
+            </p>
+          </div>
+        )}
+
         {s.status === "approved" && (
           <>
-            <div className="mt-4">
-              <button onClick={() => toggleFree(s)} className="btn-ghost">
-                {s.free_access ? "Remove free access" : "Give free access"}
-              </button>
-              <p className="mu mt-1 text-xs font-bold">
-                Free access keeps lessons and quizzes open without a monthly
-                payment (trial or scholarship).
-              </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="lbl">Study group</label>
+                <select
+                  value={s.study_group || ""}
+                  onChange={(e) => setGroup(s.id, e.target.value)}
+                  className="field"
+                >
+                  <option value="">No group yet</option>
+                  <option value="1">Group 1</option>
+                  <option value="2">Group 2</option>
+                  <option value="3">Group 3</option>
+                  <option value="4">Group 4</option>
+                </select>
+              </div>
+              <div>
+                <label className="lbl">Free access</label>
+                <button
+                  onClick={() => toggleFree(s)}
+                  className="btn-ghost w-full"
+                >
+                  {s.free_access ? "Remove free access" : "Give free access"}
+                </button>
+              </div>
             </div>
 
             <form onSubmit={(e) => saveNote(e, s.id)} className="mt-4">
@@ -261,6 +372,12 @@ export default function AdminDashboard() {
 
   return (
     <div className="up">
+      {toast && (
+        <div className="ok fixed bottom-24 left-1/2 z-[60] w-[90%] max-w-md -translate-x-1/2 shadow-xl lg:bottom-6">
+          {toast}
+        </div>
+      )}
+
       <h1 className="fluid-h2 font-extrabold">Students</h1>
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
