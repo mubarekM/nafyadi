@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import { useStudent, lvLabel, fmtDate } from "@/components/StudentShell";
+import JoinButton from "@/components/JoinButton";
 
 export default function StudentHome() {
   const { id, profile, access } = useStudent();
@@ -155,14 +156,9 @@ export default function StudentHome() {
               <p className="mu mt-1 font-bold">
                 {fmtDate(lang, d.nextClass.starts_at)}
               </p>
-              <a
-                href={d.nextClass.meeting_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn sm mt-4"
-              >
-                {t("joinClass")}
-              </a>
+              <div className="mt-4">
+                <JoinButton cls={d.nextClass} />
+              </div>
             </>
           ) : (
             <p className="mu mt-3 font-semibold">{t("noClass")}</p>

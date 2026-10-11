@@ -4,51 +4,11 @@ import { useState } from "react";
 import { usePrefs } from "@/lib/prefs";
 import { createClient } from "@/lib/supabase";
 import Controls from "@/components/Controls";
+import { BANKS, PLANS } from "@/lib/pay-config";
+import { GROUPS, LIVE } from "@/lib/schedule";
 
 const TG = "https://t.me/NAFYADWJ";
 const TEL = "+251960889388";
-
-// EDIT YOUR CLASS TIMES HERE. "s" = daytime (sun), "m" = night (moon)
-const LIVE = [
-  "satsun",
-  [
-    ["EST", "10:00 AM - 12:00 PM", "s"],
-    ["PST", "7:00 AM - 9:00 AM", "s"],
-    ["EAT", "5:00 PM - 7:00 PM", "m"],
-    ["ETH-LT", "ማታ 11:00 - 1:00 ሰዓት", "m"],
-  ],
-];
-const GROUPS = [
-  [
-    ["EST", "10:00 AM - 12:00 PM", "s"],
-    ["PST", "7:00 AM - 9:00 AM", "s"],
-    ["EAT", "5:00 PM - 7:00 PM", "m"],
-    ["ETH-LT", "ማታ 11:00 - 1:00 ሰዓት", "m"],
-  ],
-  [
-    ["EST", "1:00 PM - 3:00 PM", "s"],
-    ["PST", "10:00 AM - 12:00 PM", "s"],
-    ["EAT", "8:00 PM - 10:00 PM", "m"],
-    ["ETH-LT", "ማታ 2:00 - 4:00 ሰዓት", "m"],
-  ],
-  [
-    ["EST", "7:00 PM - 9:00 PM", "m"],
-    ["PST", "4:00 PM - 6:00 PM", "m"],
-    ["EAT", "2:00 AM - 4:00 AM", "m"],
-    ["ETH-LT", "ለሊት 8:00 - 10:00 ሰዓት", "m"],
-  ],
-  [
-    ["EST", "9:00 PM - 11:00 PM", "m"],
-    ["PST", "6:00 PM - 8:00 PM", "m"],
-    ["EAT", "4:00 AM - 6:00 AM", "s"],
-    ["ETH-LT", "ጠዋት 10:00 - 12:00 ሰዓት", "s"],
-  ],
-];
-const PRICES = [
-  ["pKids", 500],
-  ["pAdults", 400],
-  ["pOne", 2000],
-];
 
 // [CEFR badge, level name key, description key, badge background, badge text color]
 const LEVELS = [
@@ -67,6 +27,12 @@ const SKILLS = [
   ["sk6", "💬"],
   ["sk7", "🎤"],
   ["sk8", "📊"],
+];
+const STEPS = [
+  ["1", "htp1T", "htp1D", "📝"],
+  ["2", "htp2T", "htp2D", "🏦"],
+  ["3", "htp3T", "htp3D", "📸"],
+  ["4", "htp4T", "htp4D", "🎓"],
 ];
 
 function Photo({ src, alt, cls }) {
@@ -343,9 +309,9 @@ export default function Home() {
             <div className="cd mt-8 p-5 sm:p-6">
               <p className="text-lg font-extrabold">🔴 {t("live")}</p>
               <p className="pr mt-4 border-t pt-4 font-extrabold" style={line}>
-                📅 {t(LIVE[0])}
+                📅 {t("satsun")}
               </p>
-              <Times rows={LIVE[1]} />
+              <Times rows={LIVE} />
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -375,14 +341,14 @@ export default function Home() {
         <h2 className="fluid-h2 text-center font-extrabold">{t("prT")}</h2>
         <p className="mu mt-3 text-center font-semibold">{t("pNote")}</p>
         <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {PRICES.map(([k, p]) => (
+          {PLANS.map((p) => (
             <div
-              key={k}
+              key={p.plan}
               className="cd lift p-8 text-center sm:last:col-span-2 lg:last:col-span-1"
             >
-              <p className="text-lg font-extrabold">{t(k)}</p>
+              <p className="text-lg font-extrabold">{t(p.key)}</p>
               <p className="pr mt-4 text-4xl font-extrabold sm:text-5xl">
-                {p.toLocaleString("en-US")}
+                {p.amount.toLocaleString("en-US")}
               </p>
               <p className="mu mt-1 font-bold">
                 {t("etb")} {t("mo")}
@@ -404,8 +370,53 @@ export default function Home() {
         </div>
       </section>
 
+      {/* HOW TO PAY */}
+      <section id="pay" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="fluid-h2 font-extrabold">{t("htpT")}</h2>
+            <p className="mu mt-3 font-semibold sm:text-lg">{t("htpD")}</p>
+          </div>
+
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map(([n, tk, dk, icon]) => (
+              <div key={n} className="cd lift p-6 text-center">
+                <div className="grad mx-auto flex h-14 w-14 items-center justify-center rounded-full text-xl font-extrabold text-white">
+                  {n}
+                </div>
+                <p className="mt-3 text-2xl">{icon}</p>
+                <h3 className="mt-2 font-extrabold">{t(tk)}</h3>
+                <p className="mu mt-2 text-sm font-semibold leading-relaxed">
+                  {t(dk)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="cd mx-auto mt-8 max-w-3xl p-6 text-center">
+            <p className="mu text-sm font-extrabold uppercase tracking-widest">
+              {t("htpAccept")}
+            </p>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              {BANKS.map((b) => (
+                <span key={b.name} className="chip chip-n">
+                  🏦 {b.name}
+                </span>
+              ))}
+            </div>
+            <p className="pr mt-4 font-extrabold">✓ {t("htpNote")}</p>
+            <Link href="/signup" className="btn mt-5">
+              {t("htpBtn")} →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ENROLL */}
-      <section id="enroll" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
+      <section
+        id="enroll"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      >
         <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-2">
           <div>
             <h2 className="fluid-h2 font-extrabold">{t("enrollT")}</h2>
@@ -475,10 +486,7 @@ export default function Home() {
       </section>
 
       {/* ABOUT */}
-      <section
-        id="about"
-        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
-      >
+      <section id="about" className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20">
         <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <Photo
             src="/nafyad.jpg"
@@ -497,7 +505,7 @@ export default function Home() {
       {/* CONTACT */}
       <section
         id="contact"
-        className="scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+        className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
       >
         <div className="grad mx-auto max-w-4xl rounded-3xl p-6 text-center text-white sm:p-10">
           <h2 className="fluid-h2 font-extrabold">{t("conT")}</h2>

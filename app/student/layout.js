@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 import StudentShell from "@/components/StudentShell";
 
+export const metadata = {
+  title: "Student | English with Nafyad",
+  robots: { index: false, follow: false },
+};
+
 export const instant = false;
 
 export default function StudentLayout({ children }) {

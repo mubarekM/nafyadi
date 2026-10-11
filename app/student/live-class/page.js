@@ -5,36 +5,87 @@ import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import { useStudent, lvLabel, fmtDate } from "@/components/StudentShell";
 import TimeRows from "@/components/TimeRows";
+import JoinButton from "@/components/JoinButton";
 import { GROUPS, LIVE } from "@/lib/schedule";
 
+const ATTENDED = ["joined", "present", "late"];
+const LABEL = {
+  joined: "attJoined",
+  present: "attPresent",
+  late: "attLate",
+  absent: "attAbsent",
+  excused: "attExcused",
+};
+const CHIP = {
+  joined: "chip-g",
+  present: "chip-g",
+  late: "chip-y",
+  absent: "chip-r",
+  excused: "chip-n",
+  missed: "chip-r",
+};
+
 export default function StudentLiveClass() {
-  const { profile } = useStudent();
+  const { id, profile } = useStudent();
   const { t, lang } = usePrefs();
   const [classes, setClasses] = useState(null);
+  const [att, setAtt] = useState(null);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
+      const mine = (c) =>
+        c.level === "All levels" || c.level === profile.english_level;
       const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
       const { data } = await supabase
         .from("live_classes")
         .select("*")
         .gte("starts_at", since)
         .order("starts_at", { ascending: true });
-      setClasses(
-        (data || []).filter(
-          (c) => c.level === "All levels" || c.level === profile.english_level,
-        ),
+      setClasses((data || []).filter(mine));
+
+      // Attendance: classes that already happened since this student joined
+      const { data: past } = await supabase
+        .from("live_classes")
+        .select("id, title, starts_at, level")
+        .lt("starts_at", since)
+        .order("starts_at", { ascending: false })
+        .limit(60);
+      const { data: rows } = await supabase
+        .from("attendance")
+        .select("class_id, status")
+        .eq("student_id", id);
+
+      const joinedAt = new Date(profile.created_at).getTime();
+      const list = (past || []).filter(
+        (c) => mine(c) && new Date(c.starts_at).getTime() >= joinedAt,
       );
+      const byClass = {};
+      (rows || []).forEach((r) => {
+        byClass[r.class_id] = r.status;
+      });
+      const attended = list.filter((c) =>
+        ATTENDED.includes(byClass[c.id]),
+      ).length;
+      setAtt({
+        total: list.length,
+        attended,
+        recent: list
+          .slice(0, 8)
+          .map((c) => ({ ...c, status: byClass[c.id] || "missed" })),
+      });
     }
     load();
-  }, [profile.english_level]);
+  }, [id, profile.english_level, profile.created_at]);
 
   const group =
     profile.study_group >= 1 && profile.study_group <= GROUPS.length
       ? profile.study_group
       : null;
   const line = { borderColor: "var(--ln)" };
+  const rate =
+    att && att.total ? Math.round((att.attended / att.total) * 100) : 0;
 
   return (
     <div className="up space-y-6">
@@ -82,17 +133,58 @@ export default function StudentLiveClass() {
                     {c.notes}
                   </p>
                 )}
-                <a
-                  href={c.meeting_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn sm mt-4"
-                >
-                  {t("joinClass")}
-                </a>
+                <div className="mt-4">
+                  <JoinButton cls={c} />
+                </div>
               </div>
             ))}
         </div>
+      </section>
+
+      {/* My attendance */}
+      <section className="cd p-5 sm:p-6">
+        <h2 className="pr font-extrabold">✅ {t("attT")}</h2>
+        {!att ? (
+          <p className="mu mt-3 font-bold">...</p>
+        ) : att.total === 0 ? (
+          <p className="mu mt-3 font-semibold">{t("attNone")}</p>
+        ) : (
+          <>
+            <p className="mt-3 text-3xl font-extrabold">
+              {rate}%{" "}
+              <span className="mu text-base font-bold">
+                ({att.attended} {t("of")} {att.total} {t("attClasses")})
+              </span>
+            </p>
+            <div
+              className="mt-2 h-2.5 w-full overflow-hidden rounded-full"
+              style={{ background: "var(--soft)" }}
+            >
+              <div
+                className="grad h-full rounded-full"
+                style={{ width: rate + "%" }}
+              />
+            </div>
+            <div className="mt-4 space-y-2">
+              {att.recent.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3"
+                  style={line}
+                >
+                  <span className="min-w-0 flex-1 truncate font-bold">
+                    {c.title}
+                  </span>
+                  <span className={`chip ${CHIP[c.status]}`}>
+                    {c.status === "missed"
+                      ? t("attMissed")
+                      : t(LABEL[c.status])}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       {/* Full schedule */}

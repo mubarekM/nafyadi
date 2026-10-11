@@ -20,7 +20,7 @@ const emptyForm = {
   content: "",
   video_url: "",
   checklist: "",
-  file_url: "",
+  file_path: "",
   file_name: "",
   published: false,
 };
@@ -76,7 +76,7 @@ export default function AdminLessons() {
     setSaving(true);
     const supabase = createClient();
 
-    let fileUrl = form.file_url;
+    let filePath = form.file_path;
     let fileName = form.file_name;
 
     if (file) {
@@ -90,8 +90,11 @@ export default function AdminLessons() {
         setSaving(false);
         return;
       }
-      const { data } = supabase.storage.from("lesson-files").getPublicUrl(path);
-      fileUrl = data.publicUrl;
+      // Remove the old file when it is replaced
+      if (form.file_path) {
+        await supabase.storage.from("lesson-files").remove([form.file_path]);
+      }
+      filePath = path;
       fileName = file.name;
     }
 
@@ -106,7 +109,8 @@ export default function AdminLessons() {
         .split("\n")
         .map((s) => s.trim())
         .filter(Boolean),
-      file_url: fileUrl || null,
+      file_path: filePath || null,
+      file_url: null, // public links are no longer used
       file_name: fileName || null,
       published: form.published,
     };
@@ -134,7 +138,7 @@ export default function AdminLessons() {
       content: l.content || "",
       video_url: l.video_url || "",
       checklist: (l.checklist || []).join("\n"),
-      file_url: l.file_url || "",
+      file_path: l.file_path || "",
       file_name: l.file_name || "",
       published: l.published,
     });
@@ -144,10 +148,13 @@ export default function AdminLessons() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function remove(id) {
+  async function remove(l) {
     if (!confirm("Delete this lesson? This cannot be undone.")) return;
     const supabase = createClient();
-    await supabase.from("lessons").delete().eq("id", id);
+    if (l.file_path) {
+      await supabase.storage.from("lesson-files").remove([l.file_path]);
+    }
+    await supabase.from("lessons").delete().eq("id", l.id);
     await load();
   }
 
@@ -267,7 +274,7 @@ export default function AdminLessons() {
 
         <div>
           <label className="lbl">
-            File: PDF or audio (optional, max 50 MB)
+            File: PDF or audio (optional, max 50 MB). Stored privately.
           </label>
           {form.file_name && !file && (
             <p className="pr mb-2 text-sm font-bold">
@@ -334,6 +341,9 @@ export default function AdminLessons() {
                     >
                       {l.published ? "published" : "draft"}
                     </span>
+                    {l.file_name && (
+                      <span className="chip chip-n">🔒 {l.file_name}</span>
+                    )}
                     {(l.checklist || []).length > 0 && (
                       <span className="chip chip-n">
                         {l.checklist.length} checklist items
@@ -348,10 +358,7 @@ export default function AdminLessons() {
                   <button onClick={() => startEdit(l)} className="btn sm">
                     Edit
                   </button>
-                  <button
-                    onClick={() => remove(l.id)}
-                    className="btn btn-red sm"
-                  >
+                  <button onClick={() => remove(l)} className="btn btn-red sm">
                     Delete
                   </button>
                 </div>

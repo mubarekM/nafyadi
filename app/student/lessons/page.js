@@ -30,6 +30,8 @@ export default function StudentLessons() {
   const [opened, setOpened] = useState(new Set());
   const [checks, setChecks] = useState({});
   const [shown, setShown] = useState({});
+  const [urls, setUrls] = useState({});
+  const [fileErr, setFileErr] = useState({});
 
   useEffect(() => {
     if (!access) return;
@@ -78,10 +80,32 @@ export default function StudentLessons() {
       );
   }
 
+  // Private files: ask for a link that works for one hour
+  async function loadFile(l) {
+    if (urls[l.id]) return;
+    if (l.file_path) {
+      const supabase = createClient();
+      const { data, error } = await supabase.storage
+        .from("lesson-files")
+        .createSignedUrl(l.file_path, 3600);
+      if (error || !data?.signedUrl) {
+        setFileErr((e) => ({ ...e, [l.id]: true }));
+        return;
+      }
+      setFileErr((e) => ({ ...e, [l.id]: false }));
+      setUrls((u) => ({ ...u, [l.id]: data.signedUrl }));
+    } else if (l.file_url) {
+      setUrls((u) => ({ ...u, [l.id]: l.file_url }));
+    }
+  }
+
   function onSection(e, l, sec) {
     const open = e.currentTarget.open;
     setShown((s) => ({ ...s, [`${l.id}:${sec}`]: open }));
-    if (open) markOpened(l);
+    if (open) {
+      markOpened(l);
+      if (sec === "file") loadFile(l);
+    }
   }
 
   async function toggleCheck(l, idx) {
@@ -133,7 +157,7 @@ export default function StudentLessons() {
     const sections = [];
     if (embed) sections.push(["video", "🎬", t("secVideo")]);
     if (l.content) sections.push(["notes", "📝", t("secNotes")]);
-    if (l.file_url) sections.push(["file", "📎", t("secFiles")]);
+    if (l.file_path || l.file_url) sections.push(["file", "📎", t("secFiles")]);
     if (list.length > 0)
       sections.push([
         "check",
@@ -191,17 +215,23 @@ export default function StudentLessons() {
                     <p className="pr mb-2 break-words font-extrabold">
                       {l.file_name || t("lessonFile")}
                     </p>
-                    {isAudio(l.file_name) ? (
-                      <audio controls src={l.file_url} className="w-full" />
+                    {urls[l.id] ? (
+                      isAudio(l.file_name) ? (
+                        <audio controls src={urls[l.id]} className="w-full" />
+                      ) : (
+                        <a
+                          href={urls[l.id]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn sm"
+                        >
+                          {t("openFile")}
+                        </a>
+                      )
+                    ) : fileErr[l.id] ? (
+                      <p className="err">{t("fileErr")}</p>
                     ) : (
-                      <a
-                        href={l.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn sm"
-                      >
-                        {t("openFile")}
-                      </a>
+                      <p className="mu font-bold">{t("fileLoading")}</p>
                     )}
                   </div>
                 )}
