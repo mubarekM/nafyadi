@@ -9,6 +9,12 @@ const PLAN_NAME = {
   one: "One-on-one class",
 };
 const CHIP = { pending: "chip-y", approved: "chip-g", rejected: "chip-r" };
+const AUTO = {
+  verified: ["chip-g", "⚡ auto-verified"],
+  mismatch: ["chip-r", "⚠ receipt does not match"],
+  not_found: ["chip-y", "receipt not found"],
+  unavailable: ["chip-n", "not checked"],
+};
 const etb = (n) => Number(n).toLocaleString("en-US");
 const monthName = (m) => {
   const [y, mo] = m.split("-");
@@ -96,6 +102,24 @@ export default function AdminPayments() {
     setBusyId(null);
   }
 
+  async function recheck(p) {
+    setMsg("");
+    setBusyId(p.id);
+    try {
+      const res = await fetch("/api/payments/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: p.id, force: true }),
+      });
+      const out = await res.json();
+      if (!res.ok) setMsg(out.error || "Re-check failed.");
+      await load();
+    } catch {
+      setMsg("Re-check failed.");
+    }
+    setBusyId(null);
+  }
+
   if (!pays) return <p className="mu font-bold">...</p>;
 
   const today = new Date();
@@ -104,6 +128,9 @@ export default function AdminPayments() {
     (p) => p.status === "approved" && p.month === thisMonth,
   );
   const total = approvedNow.reduce((s, p) => s + Number(p.amount), 0);
+  const autoNow = approvedNow.filter(
+    (p) => p.auto_status === "verified",
+  ).length;
 
   const counts = {
     pending: pays.filter((p) => p.status === "pending").length,
@@ -116,6 +143,7 @@ export default function AdminPayments() {
   const cards = [
     ["⏳", "Waiting for you", counts.pending],
     ["✅", "Paid this month", approvedNow.length],
+    ["⚡", "Auto-confirmed", autoNow],
     ["💰", "ETB this month", etb(total)],
   ];
 
@@ -123,7 +151,7 @@ export default function AdminPayments() {
     <div className="up">
       <h1 className="fluid-h2 font-extrabold">Payments</h1>
 
-      <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {cards.map(([icon, label, n]) => (
           <div key={label} className="cd p-3 sm:p-5">
             <p className="text-2xl">{icon}</p>
@@ -159,6 +187,7 @@ export default function AdminPayments() {
         {shown.map((p) => {
           const who = people[p.student_id];
           const url = urls[p.proof_path];
+          const auto = p.auto_status ? AUTO[p.auto_status] : null;
           return (
             <div
               key={p.id}
@@ -192,7 +221,12 @@ export default function AdminPayments() {
                   <p className="truncate text-lg font-extrabold">
                     {who?.full_name || "Student"}
                   </p>
-                  <span className={`chip ${CHIP[p.status]}`}>{p.status}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {auto && (
+                      <span className={`chip ${auto[0]}`}>{auto[1]}</span>
+                    )}
+                    <span className={`chip ${CHIP[p.status]}`}>{p.status}</span>
+                  </div>
                 </div>
                 {who?.phone && (
                   <a
@@ -208,13 +242,22 @@ export default function AdminPayments() {
                 <p className="mu text-sm font-bold">
                   {PLAN_NAME[p.plan] || p.plan} · for {monthName(p.month)}
                 </p>
-                <p className="mu text-sm font-bold">
+                <p className="mu break-all text-sm font-bold">
                   {p.bank || "Bank not given"}
                   {p.reference ? ` · Ref: ${p.reference}` : ""}
                 </p>
                 <p className="mu text-xs font-bold">
                   Sent {when(p.created_at)}
                 </p>
+
+                {p.auto_note && (
+                  <p
+                    className="mt-2 rounded-lg px-3 py-2 text-sm font-bold"
+                    style={{ background: "var(--soft)" }}
+                  >
+                    🤖 {p.auto_note}
+                  </p>
+                )}
 
                 <input
                   value={notes[p.id] ?? ""}
@@ -242,6 +285,17 @@ export default function AdminPayments() {
                       className="btn btn-red sm"
                     >
                       Reject
+                    </button>
+                  )}
+                  {p.status === "pending" && p.reference && (
+                    <button
+                      disabled={busyId === p.id}
+                      onClick={() => recheck(p)}
+                      className="btn-ghost"
+                    >
+                      {busyId === p.id
+                        ? "Checking..."
+                        : "🤖 Re-check automatically"}
                     </button>
                   )}
                   {p.status !== "pending" && (
