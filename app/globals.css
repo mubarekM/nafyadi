@@ -662,3 +662,27 @@ html.hc :focus-visible {
     print-color-adjust: exact;
   }
 }
+
+/* ===== Contrast fixes for older green and red text ===== */
+.text-green-500,
+.text-green-600 {
+  color: #15803d !important;
+}
+.text-red-500,
+.text-red-600 {
+  color: #b91c1c !important;
+}
+html.dark .text-green-500,
+html.dark .text-green-600 {
+  color: #4ade80 !important;
+}
+html.dark .text-red-500,
+html.dark .text-red-600 {
+  color: #fca5a5 !important;
+}
+html.hc .text-green-500,
+html.hc .text-green-600,
+html.hc .text-red-500,
+html.hc .text-red-600 {
+  color: var(--tx) !important;
+}
