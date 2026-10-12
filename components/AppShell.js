@@ -37,12 +37,12 @@ export default function AppShell({
       ? path === it.href
       : path === it.href || path.startsWith(it.href + "/");
 
-  const flat = groups.flatMap((g) =>
+  const flat = (groups || []).flatMap((g) =>
     g.children
       ? g.children.map((c) => ({ ...c, icon: c.icon || g.icon }))
       : [g],
   );
-  const activeKey = groups.find(
+  const activeKey = (groups || []).find(
     (g) => g.children && g.children.some(isOn),
   )?.key;
   const isOpen = (g) =>
@@ -52,7 +52,7 @@ export default function AppShell({
     (g.children || []).reduce((n, c) => n + (badges[c.href] || 0), 0);
   const overflow = flat.filter((it) => !tabs.some((x) => x.href === it.href));
   const moreActive = overflow.some(isOn);
-  const home = groups[0].href;
+  const home = groups?.[0]?.href || "/";
   const initial = (user?.name || "?").charAt(0).toUpperCase();
 
   const badge = (n) =>
@@ -80,7 +80,7 @@ export default function AppShell({
           aria-label="Main"
           className="flex-1 space-y-1 overflow-y-auto px-3 pb-4"
         >
-          {groups.map((g) =>
+          {(groups || []).map((g) =>
             g.children ? (
               <div key={g.key}>
                 <button

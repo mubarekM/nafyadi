@@ -10,6 +10,7 @@ const GROUPS = [
     key: "people",
     label: "People",
     icon: "👥",
+    href: "/admin/dashboard", // Added href so GROUPS[0].href is always a valid path
     children: [
       { href: "/admin/dashboard", label: "Students", icon: "👥" },
       { href: "/admin/enrollments", label: "Enrollments", icon: "📩" },
@@ -19,6 +20,7 @@ const GROUPS = [
     key: "learn",
     label: "Learning",
     icon: "📚",
+    href: "/admin/lessons",
     children: [
       { href: "/admin/lessons", label: "Lessons", icon: "📚" },
       { href: "/admin/quizzes", label: "Quizzes", icon: "📝" },
