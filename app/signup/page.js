@@ -15,6 +15,8 @@ const LEVELS = [
   ["Advanced", "lvAdvanced"],
 ];
 
+const CONSENT_VERSION = "2026-10";
+
 export default function Signup() {
   const { t } = usePrefs();
   const [done, setDone] = useState(false);
@@ -37,6 +39,8 @@ export default function Signup() {
           full_name: form.get("full_name"),
           phone: form.get("phone"),
           english_level: form.get("english_level"),
+          consent_at: new Date().toISOString(),
+          consent_version: CONSENT_VERSION,
         },
       },
     });
@@ -104,6 +108,32 @@ export default function Signup() {
             />
           </div>
 
+          <label
+            className="flex items-start gap-3 rounded-xl border-2 p-3 text-sm font-bold"
+            style={{ borderColor: "var(--bd)" }}
+          >
+            <input name="consent" type="checkbox" required className="mt-0.5" />
+            <span>
+              {t("consentA")}{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                className="pr font-extrabold underline"
+              >
+                {t("termsT")}
+              </Link>{" "}
+              {t("consentAnd")}{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="pr font-extrabold underline"
+              >
+                {t("privacyT")}
+              </Link>
+              . {t("consentKid")}
+            </span>
+          </label>
+
           {error && <p className="err">{error}</p>}
 
           <button type="submit" disabled={loading} className="btn w-full">
@@ -114,7 +144,7 @@ export default function Signup() {
 
       <p className="mu mt-8 text-center text-sm font-bold">
         {t("hasAcc")}{" "}
-        <Link href="/login" className="pr hover:underline">
+        <Link href="/login" className="pr font-extrabold underline">
           {t("goLogin")}
         </Link>
       </p>

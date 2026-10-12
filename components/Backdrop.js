@@ -37,7 +37,7 @@ export default function Backdrop() {
   return (
     <div
       aria-hidden="true"
-      className="no-print pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      className="backdrop no-print pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       <div className="bd-fb absolute inset-0" />
       {list.map((src, k) => (

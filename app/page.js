@@ -12,11 +12,11 @@ const TEL = "+251960889388";
 
 // [CEFR badge, level name key, description key, badge background, badge text color]
 const LEVELS = [
-  ["A1", "lvBeginner", "ld1", "#dbeafe", "#1d4ed8"],
-  ["A2", "lvElementary", "ld2", "#dcfce7", "#166534"],
-  ["B1", "lvIntermediate", "ld3", "#fef3c7", "#92400e"],
-  ["B2", "lvUpper", "ld4", "#ede9fe", "#6d28d9"],
-  ["C1+", "lvAdvanced", "ld5", "#fee2e2", "#b91c1c"],
+  ["A1", "lvBeginner", "ld1", "#dbeafe", "#1e3a8a"],
+  ["A2", "lvElementary", "ld2", "#dcfce7", "#14532d"],
+  ["B1", "lvIntermediate", "ld3", "#fef3c7", "#78350f"],
+  ["B2", "lvUpper", "ld4", "#ede9fe", "#4c1d95"],
+  ["C1+", "lvAdvanced", "ld5", "#fee2e2", "#7f1d1d"],
 ];
 const SKILLS = [
   ["sk1", "🗣️"],
@@ -101,6 +101,7 @@ export default function Home() {
       full_name: String(fd.get("full_name") || "").trim(),
       email: String(fd.get("email") || "").trim(),
       phone: String(fd.get("phone") || "").trim(),
+      consent_at: new Date().toISOString(),
     });
     if (error) {
       setEnr("error");
@@ -111,9 +112,13 @@ export default function Home() {
   }
 
   return (
-    <main className="b0 tx overflow-x-hidden">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="b0 tx overflow-x-hidden outline-none"
+    >
       {/* NAVBAR */}
-      <header className="b0 fixed inset-x-0 top-0 z-50 border-b" style={line}>
+      <header className="b0 fixed inset-x-0 top-0 z-50 border-b-2" style={line}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
           <a
             href="#top"
@@ -122,12 +127,12 @@ export default function Home() {
             <span className="hidden min-[400px]:inline">English with </span>
             Nafyad
           </a>
-          <nav className="hidden gap-6 xl:flex">
+          <nav aria-label="Main" className="hidden gap-6 xl:flex">
             {nav.map(([h, k]) => (
               <a
                 key={h}
                 href={h}
-                className="mu text-sm font-bold hover:opacity-70"
+                className="tx text-sm font-bold underline-offset-4 hover:underline"
               >
                 {t(k)}
               </a>
@@ -143,14 +148,15 @@ export default function Home() {
             <button
               onClick={() => setMenu(!menu)}
               aria-label="Menu"
-              className="cd px-3 py-1.5 text-lg xl:hidden"
+              aria-expanded={menu}
+              className="cd min-h-[44px] min-w-[44px] px-3 py-1.5 text-lg xl:hidden"
             >
               {menu ? "✕" : "☰"}
             </button>
           </div>
         </div>
         {menu && (
-          <div className="b0 border-t px-4 pb-5 pt-2 xl:hidden" style={line}>
+          <div className="b0 border-t-2 px-4 pb-5 pt-2 xl:hidden" style={line}>
             {nav.map(([h, k]) => (
               <a
                 key={h}
@@ -161,10 +167,10 @@ export default function Home() {
                 {t(k)}
               </a>
             ))}
-            <Link href="/signup" className="btn mt-3 block w-full">
+            <Link href="/signup" className="btn mt-3 flex w-full">
               {t("join")}
             </Link>
-            <Link href="/login" className="btn2 mt-3 block w-full">
+            <Link href="/login" className="btn2 mt-3 flex w-full">
               {t("login")}
             </Link>
           </div>
@@ -197,7 +203,7 @@ export default function Home() {
             </div>
             <a
               href="#enroll"
-              className="pr mt-5 inline-block text-sm font-extrabold hover:underline"
+              className="pr mt-5 inline-block text-sm font-extrabold underline underline-offset-4"
             >
               {t("enrollLink")} →
             </a>
@@ -206,7 +212,7 @@ export default function Home() {
             <Photo
               src="/hero.jpg"
               alt="Student learning English online"
-              cls="h-64 w-full rounded-3xl shadow-2xl sm:h-80 lg:h-[28rem]"
+              cls="h-64 w-full rounded-3xl border-2 shadow-2xl sm:h-80 lg:h-[28rem]"
             />
             <div className="cd fl pr absolute -bottom-4 left-3 px-4 py-2.5 text-sm font-extrabold shadow-xl">
               🔴 Live · Zoom / Meet
@@ -255,12 +261,12 @@ export default function Home() {
           {LEVELS.map(([code, nameKey, descKey, bg, fg], i) => (
             <div
               key={code}
-              className={`flex items-start gap-4 p-4 sm:gap-5 sm:p-5 ${i > 0 ? "border-t" : ""}`}
+              className={`flex items-start gap-4 p-4 sm:gap-5 sm:p-5 ${i > 0 ? "border-t-2" : ""}`}
               style={line}
             >
               <span
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-extrabold sm:h-14 sm:w-14 sm:text-lg"
-                style={{ background: bg, color: fg }}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 text-base font-extrabold sm:h-14 sm:w-14 sm:text-lg"
+                style={{ background: bg, color: fg, borderColor: fg }}
               >
                 {code}
               </span>
@@ -288,7 +294,9 @@ export default function Home() {
               key={k}
               className="cd lift flex flex-col items-center gap-2 p-4 text-center"
             >
-              <span className="text-3xl">{icon}</span>
+              <span className="text-3xl" aria-hidden="true">
+                {icon}
+              </span>
               <span className="text-sm font-extrabold sm:text-base">
                 {t(k)}
               </span>
@@ -308,7 +316,10 @@ export default function Home() {
             <p className="mu mt-4 font-semibold leading-relaxed">{t("schD")}</p>
             <div className="cd mt-8 p-5 sm:p-6">
               <p className="text-lg font-extrabold">🔴 {t("live")}</p>
-              <p className="pr mt-4 border-t pt-4 font-extrabold" style={line}>
+              <p
+                className="pr mt-4 border-t-2 pt-4 font-extrabold"
+                style={line}
+              >
                 📅 {t("satsun")}
               </p>
               <Times rows={LIVE} />
@@ -321,7 +332,7 @@ export default function Home() {
                   {t("group")} {i + 1}
                 </p>
                 <p
-                  className="pr mt-1 border-b pb-3 font-extrabold"
+                  className="pr mt-1 border-b-2 pb-3 font-extrabold"
                   style={line}
                 >
                   {t("tuethu")}
@@ -353,14 +364,14 @@ export default function Home() {
               <p className="mu mt-1 font-bold">
                 {t("etb")} {t("mo")}
               </p>
-              <Link href="/signup" className="btn mt-6 w-full">
+              <Link href="/signup" className="btn mt-6 flex w-full">
                 {t("join")}
               </Link>
               <p className="mu mt-4 text-sm font-bold">
                 {t("hasAcc")}{" "}
                 <Link
                   href="/login"
-                  className="pr font-extrabold hover:underline"
+                  className="pr font-extrabold underline underline-offset-4"
                 >
                   {t("goLogin")}
                 </Link>
@@ -384,7 +395,9 @@ export default function Home() {
                 <div className="grad mx-auto flex h-14 w-14 items-center justify-center rounded-full text-xl font-extrabold text-white">
                   {n}
                 </div>
-                <p className="mt-3 text-2xl">{icon}</p>
+                <p className="mt-3 text-2xl" aria-hidden="true">
+                  {icon}
+                </p>
                 <h3 className="mt-2 font-extrabold">{t(tk)}</h3>
                 <p className="mu mt-2 text-sm font-semibold leading-relaxed">
                   {t(dk)}
@@ -471,6 +484,38 @@ export default function Home() {
                   aria-hidden="true"
                   style={{ position: "absolute", left: "-9999px", opacity: 0 }}
                 />
+
+                <label
+                  className="flex items-start gap-3 rounded-xl border-2 p-3 text-sm font-bold"
+                  style={{ borderColor: "var(--bd)" }}
+                >
+                  <input
+                    name="consent"
+                    type="checkbox"
+                    required
+                    className="mt-0.5"
+                  />
+                  <span>
+                    {t("consentA")}{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      className="pr font-extrabold underline"
+                    >
+                      {t("termsT")}
+                    </Link>{" "}
+                    {t("consentAnd")}{" "}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      className="pr font-extrabold underline"
+                    >
+                      {t("privacyT")}
+                    </Link>
+                    . {t("consentKid")}
+                  </span>
+                </label>
+
                 {enr === "error" && <p className="err">{t("enrollErr")}</p>}
                 <button
                   type="submit"
@@ -491,7 +536,7 @@ export default function Home() {
           <Photo
             src="/nafyad.jpg"
             alt="Teacher Nafyad WJ"
-            cls="mx-auto h-80 w-full max-w-sm rounded-3xl shadow-2xl sm:h-96"
+            cls="mx-auto h-80 w-full max-w-sm rounded-3xl border-2 shadow-2xl sm:h-96"
           />
           <div>
             <h2 className="fluid-h2 font-extrabold">{t("aboutT")}</h2>
@@ -507,21 +552,24 @@ export default function Home() {
         id="contact"
         className="b1 scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
       >
-        <div className="grad mx-auto max-w-4xl rounded-3xl p-6 text-center text-white sm:p-10">
+        <div
+          className="grad mx-auto max-w-4xl rounded-3xl border-2 p-6 text-center text-white sm:p-10"
+          style={{ borderColor: "rgba(255,255,255,.35)" }}
+        >
           <h2 className="fluid-h2 font-extrabold">{t("conT")}</h2>
-          <p className="mt-3 font-semibold text-white/90">{t("conD")}</p>
+          <p className="mt-3 font-semibold text-white">{t("conD")}</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
             <a
               href={TG}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block rounded-full bg-white px-7 py-3 text-center font-extrabold text-blue-700"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-white px-7 py-3 text-center font-extrabold text-blue-900"
             >
               ✈️ {t("tg")}
             </a>
             <a
               href={`tel:${TEL}`}
-              className="inline-block break-words rounded-full border-2 border-white px-7 py-3 text-center font-extrabold"
+              className="inline-flex min-h-[48px] items-center justify-center break-words rounded-full border-2 border-white px-7 py-3 text-center font-extrabold"
             >
               📞 {t("call")} {TEL}
             </a>
@@ -530,10 +578,24 @@ export default function Home() {
       </section>
 
       <footer
-        className="mu border-t px-4 py-8 text-center text-sm font-bold"
+        className="border-t-2 px-4 py-8 text-center text-sm font-bold"
         style={line}
       >
-        © 2026 English with Nafyad. {t("foot")}
+        <div className="mb-3 flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <Link
+            href="/privacy"
+            className="pr font-extrabold underline underline-offset-4"
+          >
+            {t("privacyT")}
+          </Link>
+          <Link
+            href="/terms"
+            className="pr font-extrabold underline underline-offset-4"
+          >
+            {t("termsT")}
+          </Link>
+        </div>
+        <p className="mu">© 2026 English with Nafyad. {t("foot")}</p>
       </footer>
     </main>
   );
