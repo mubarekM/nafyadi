@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
+import Icon from "./Icon";
 
 const ENG = {
   chatPh: "Write a message...",
   send: "Send",
-  chatEmpty: "No messages yet. Say hello! 👋",
+  chatEmpty: "No messages yet. Say hello!",
   teacherT: "Teacher",
   delAsk: "Delete this message?",
 };
@@ -41,14 +42,15 @@ export default function ChatRoom({ forceEn = false }) {
     let stopped = false;
 
     async function start() {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user || stopped) return;
-      setMe(u.user.id);
+      const { data: s } = await supabase.auth.getSession();
+      const user = s?.session?.user;
+      if (!user || stopped) return;
+      setMe(user.id);
       const { data: p } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", u.user.id)
-        .single();
+        .eq("id", user.id)
+        .maybeSingle();
       setIsAdmin(p?.role === "admin");
       await fetchAll(supabase);
 
@@ -144,9 +146,11 @@ export default function ChatRoom({ forceEn = false }) {
         onScroll={onScroll}
         className="flex-1 space-y-3 overflow-y-auto p-4"
       >
-        {!msgs && <p className="mu font-bold">...</p>}
+        {!msgs && <p className="mu font-semibold">...</p>}
         {msgs && msgs.length === 0 && (
-          <p className="mu py-10 text-center font-bold">{tr("chatEmpty")}</p>
+          <p className="mu py-10 text-center font-semibold">
+            {tr("chatEmpty")}
+          </p>
         )}
         {msgs &&
           msgs.map((m) => {
@@ -158,13 +162,16 @@ export default function ChatRoom({ forceEn = false }) {
                 className={`flex ${mine ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[88%] px-4 py-2.5 sm:max-w-[75%] ${
-                    mine
-                      ? "bubble-me rounded-2xl rounded-br-md"
-                      : "cd rounded-2xl rounded-bl-md"
+                  className={`max-w-[88%] rounded-lg px-3.5 py-2.5 sm:max-w-[75%] ${
+                    mine ? "bubble-me" : "border"
                   }`}
+                  style={
+                    mine
+                      ? undefined
+                      : { borderColor: "var(--ln)", background: "var(--soft)" }
+                  }
                 >
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                     {!mine && (
                       <span className="pr">{m.sender_name || "Student"}</span>
                     )}
@@ -178,11 +185,11 @@ export default function ChatRoom({ forceEn = false }) {
                         aria-label="Delete"
                         className="opacity-70 hover:opacity-100"
                       >
-                        ✕
+                        <Icon name="x" size={14} />
                       </button>
                     )}
                   </div>
-                  <p className="mt-1 whitespace-pre-wrap font-semibold">
+                  <p className="keep-emoji mt-1 whitespace-pre-wrap">
                     {m.body}
                   </p>
                 </div>
@@ -210,7 +217,7 @@ export default function ChatRoom({ forceEn = false }) {
             rows={2}
             maxLength={1000}
             placeholder={tr("chatPh")}
-            className="field"
+            className="field keep-emoji"
             style={{ resize: "none" }}
           />
           <button
@@ -218,6 +225,7 @@ export default function ChatRoom({ forceEn = false }) {
             disabled={sending || !text.trim()}
             className="btn shrink-0"
           >
+            <Icon name="send" size={16} />
             {tr("send")}
           </button>
         </div>

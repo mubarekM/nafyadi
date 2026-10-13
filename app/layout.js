@@ -1,14 +1,17 @@
-import { Suspense } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Public_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/lib/prefs";
-import Backdrop from "@/components/Backdrop";
 import SkipLink from "@/components/SkipLink";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sans = Public_Sans({
   subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const serif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  display: "swap",
 });
 
 export const metadata = {
@@ -20,7 +23,7 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0b1220",
+  themeColor: "#0b4a38",
 };
 
 // Applies saved dark mode, high contrast and text size before the page paints
@@ -35,7 +38,7 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${sans.variable} ${serif.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -44,9 +47,6 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers>
           <SkipLink />
-          <Suspense fallback={null}>
-            <Backdrop />
-          </Suspense>
           {children}
         </Providers>
       </body>

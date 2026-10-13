@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
-import { useStudent, lvLabel, fmtDate } from "@/components/StudentShell";
+import { useStudent, lvLabel } from "@/components/StudentShell";
 import JoinButton from "@/components/JoinButton";
+import Icon from "@/components/Icon";
 
 export default function StudentHome() {
   const { id, profile, access } = useStudent();
@@ -19,6 +20,13 @@ export default function StudentHome() {
     year: "numeric",
     month: "long",
   });
+  const short = (iso) =>
+    new Date(iso).toLocaleString(loc, {
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  const line = { borderColor: "var(--ln)" };
 
   useEffect(() => {
     async function load() {
@@ -67,7 +75,7 @@ export default function StudentHome() {
         total: lessons.length,
         done: lessons.filter((x) => opened.has(x.id)).length,
         todo: quizzes.filter((x) => !doneQuiz.has(x.id)).length,
-        subs: subs.slice(0, 3),
+        subs: subs.slice(0, 4),
         pay: pays.some((x) => x.status === "approved")
           ? "paid"
           : pays.some((x) => x.status === "pending")
@@ -80,165 +88,167 @@ export default function StudentHome() {
   }, [id, profile.english_level]);
 
   const pct = d && d.total ? Math.round((d.done / d.total) * 100) : 0;
+  const payTone =
+    d?.pay === "paid"
+      ? "stat-ok"
+      : d?.pay === "review"
+        ? "stat-warn"
+        : "stat-bad";
+  const payWord =
+    d?.pay === "paid"
+      ? t("stPaid")
+      : d?.pay === "review"
+        ? t("stReview")
+        : t("stDue");
 
   return (
-    <div className="space-y-5">
-      {/* Greeting */}
-      <section className="grad up rounded-3xl p-6 text-white sm:p-8">
-        <p className="text-sm font-bold text-white/80">{t("welcome")}</p>
-        <h2 className="mt-1 break-words text-3xl font-extrabold sm:text-4xl">
-          {profile.full_name}
-        </h2>
-        <p className="mt-3 inline-block rounded-full bg-white/20 px-3 py-1 text-sm font-extrabold">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold sm:text-3xl">
+          {t("welcome")}, {profile.full_name}
+        </h1>
+        <p className="mu mt-1">
           {t("levelIs")}: {lvLabel(t, profile.english_level)}
         </p>
-        <div className="mt-6">
-          <div className="flex justify-between text-sm font-bold">
-            <span>{t("lessonsDone")}</span>
-            <span>
-              {d ? d.done : 0} {t("of")} {d ? d.total : 0}
-            </span>
-          </div>
-          <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-white/25">
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="cd stat p-5">
+          <p className="display text-3xl">{d ? `${pct}%` : "–"}</p>
+          <p className="mu mt-1 text-sm">{t("stLessons")}</p>
+          <div
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ background: "var(--soft)" }}
+          >
             <div
-              className="h-full rounded-full bg-white"
-              style={{ width: pct + "%" }}
+              className="h-full rounded-full"
+              style={{ width: pct + "%", background: "var(--pri)" }}
             />
           </div>
-        </div>
-      </section>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        {/* Payment */}
-        <div className="cd p-5 sm:p-6">
-          <h3 className="pr font-extrabold">💳 {t("dueTitle")}</h3>
-          {!d ? (
-            <p className="mu mt-3 font-semibold">...</p>
-          ) : (
-            <>
-              <span
-                className={`chip mt-3 ${
-                  d.pay === "paid"
-                    ? "chip-g"
-                    : d.pay === "review"
-                      ? "chip-y"
-                      : "chip-r"
-                }`}
-              >
-                {d.pay === "paid"
-                  ? `${t("duePaid")} ${monthName}`
-                  : d.pay === "review"
-                    ? t("dueReview")
-                    : `${t("dueDue")} ${monthName}`}
-              </span>
-              <div className="mt-4">
-                <Link
-                  href="/student/payments"
-                  className={
-                    d.pay === "due" ? "btn sm" : "btn-ghost inline-block"
-                  }
-                >
-                  {d.pay === "due" ? t("payNow") : t("navPay")}
-                </Link>
-              </div>
-            </>
-          )}
+          <p className="mu mt-2 text-xs">
+            {d ? d.done : 0} {t("of")} {d ? d.total : 0}
+          </p>
         </div>
 
-        {/* Next live class */}
-        <div className="cd p-5 sm:p-6">
-          <h3 className="pr font-extrabold">🔴 {t("nextClass")}</h3>
-          {!d ? (
-            <p className="mu mt-3 font-semibold">...</p>
-          ) : d.nextClass ? (
+        <div className="cd stat p-5">
+          <p className="display text-3xl">{d ? d.todo : "–"}</p>
+          <p className="mu mt-1 text-sm">{t("stQuizzes")}</p>
+          <Link
+            href="/student/quizzes"
+            className="pr mt-3 inline-flex items-center gap-1 text-sm font-semibold hover:underline"
+          >
+            {t("viewAll")}
+            <Icon name="arrowRight" size={14} />
+          </Link>
+        </div>
+
+        <div className={`cd stat ${d ? payTone : ""} p-5`}>
+          <p className="display text-3xl">{d ? payWord : "–"}</p>
+          <p className="mu mt-1 text-sm">
+            {t("stPayment")} · {monthName}
+          </p>
+          <Link
+            href="/student/payments"
+            className="pr mt-3 inline-flex items-center gap-1 text-sm font-semibold hover:underline"
+          >
+            {d?.pay === "due" ? t("payNow") : t("navPay")}
+            <Icon name="arrowRight" size={14} />
+          </Link>
+        </div>
+
+        <div className="cd stat p-5">
+          {d?.nextClass ? (
             <>
-              <p className="mt-3 text-lg font-extrabold">{d.nextClass.title}</p>
-              <p className="mu mt-1 font-bold">
-                {fmtDate(lang, d.nextClass.starts_at)}
+              <p className="display text-2xl">{short(d.nextClass.starts_at)}</p>
+              <p className="mu mt-1 truncate text-sm">
+                {t("stClass")} · {d.nextClass.title}
               </p>
-              <div className="mt-4">
-                <JoinButton cls={d.nextClass} />
+              <div className="mt-3">
+                <JoinButton cls={d.nextClass} className="btn sm" />
               </div>
             </>
           ) : (
-            <p className="mu mt-3 font-semibold">{t("noClass")}</p>
-          )}
-        </div>
-
-        {/* Continue learning */}
-        <div className="cd p-5 sm:p-6">
-          <h3 className="pr font-extrabold">📚 {t("contT")}</h3>
-          {!d ? (
-            <p className="mu mt-3 font-semibold">...</p>
-          ) : !access ? (
-            <p className="mu mt-3 font-semibold">{t("contLocked")}</p>
-          ) : d.next ? (
             <>
-              <p className="mu mt-3 text-sm font-bold">
-                {t("week")} {d.next.week || 1}
-                {d.next.week_title ? `: ${d.next.week_title}` : ""}
-              </p>
-              <p className="text-lg font-extrabold">{d.next.title}</p>
-              <Link href="/student/lessons" className="btn sm mt-4">
-                {t("openLesson")}
-              </Link>
-            </>
-          ) : d.total > 0 ? (
-            <p className="mt-3 font-extrabold">{t("contAll")}</p>
-          ) : (
-            <p className="mu mt-3 font-semibold">{t("noLessonsYet")}</p>
-          )}
-        </div>
-
-        {/* Quizzes */}
-        <div className="cd p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="pr font-extrabold">📝 {t("navQuizzes")}</h3>
-            <Link
-              href="/student/quizzes"
-              className="pr shrink-0 text-sm font-extrabold hover:underline"
-            >
-              {t("viewAll")}
-            </Link>
-          </div>
-          {!d ? (
-            <p className="mu mt-3 font-semibold">...</p>
-          ) : (
-            <>
-              <p className="mt-3 font-extrabold">
-                {d.todo > 0 ? `${d.todo} ${t("quizTodo")}` : t("quizAllDone")}
-              </p>
-              <div className="mt-3 space-y-2">
-                {d.subs.map((x) => (
-                  <div
-                    key={x.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3"
-                    style={{ borderColor: "var(--ln)" }}
-                  >
-                    <span className="min-w-0 flex-1 truncate font-bold">
-                      {x.quizzes?.title || "Quiz"}
-                    </span>
-                    {x.status === "graded" ? (
-                      <span className="ok !px-3 !py-1 text-sm">{x.score}</span>
-                    ) : (
-                      <span className="pill mu text-xs font-extrabold">
-                        {t("waitingTeacher")}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <p className="display text-3xl">–</p>
+              <p className="mu mt-1 text-sm">{t("stClass")}</p>
+              <p className="mu mt-3 text-sm">{d ? t("noClass") : "..."}</p>
             </>
           )}
         </div>
       </div>
 
-      {/* Teacher's note */}
-      <div className="cd p-5 sm:p-6">
-        <h3 className="pr font-extrabold">💬 {t("noteTitle")}</h3>
-        <p className="mu mt-3 whitespace-pre-wrap font-semibold leading-relaxed">
-          {profile.teacher_note || t("noNote")}
-        </p>
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        {/* Continue learning */}
+        <section className="cd p-5 sm:p-6">
+          <h2 className="font-semibold">{t("contT")}</h2>
+          {!d ? (
+            <p className="mu mt-3">...</p>
+          ) : !access ? (
+            <div className="callout mt-3 flex items-start gap-3 p-4">
+              <Icon name="lock" size={18} className="mt-0.5" />
+              <p className="text-sm">{t("contLocked")}</p>
+            </div>
+          ) : d.next ? (
+            <div
+              className="mt-4 flex flex-col gap-4 rounded-md border p-4 sm:flex-row sm:items-center sm:justify-between"
+              style={line}
+            >
+              <div className="min-w-0">
+                <p className="mu text-sm">
+                  {t("week")} {d.next.week || 1}
+                  {d.next.week_title ? `: ${d.next.week_title}` : ""}
+                </p>
+                <p className="mt-0.5 text-lg font-semibold">{d.next.title}</p>
+              </div>
+              <Link href="/student/lessons" className="btn sm shrink-0">
+                {t("openLesson")}
+                <Icon name="arrowRight" size={14} />
+              </Link>
+            </div>
+          ) : d.total > 0 ? (
+            <p className="mt-3 font-semibold">{t("contAll")}</p>
+          ) : (
+            <p className="mu mt-3">{t("noLessonsYet")}</p>
+          )}
+
+          <h2 className="mt-8 font-semibold">{t("recentRes")}</h2>
+          {!d ? (
+            <p className="mu mt-3">...</p>
+          ) : d.subs.length === 0 ? (
+            <p className="mu mt-3">{t("noQuizYet")}</p>
+          ) : (
+            <ul className="mt-3 divide-y rounded-md border" style={line}>
+              {d.subs.map((x) => (
+                <li
+                  key={x.id}
+                  className="flex flex-wrap items-center justify-between gap-2 p-3"
+                  style={line}
+                >
+                  <span className="min-w-0 flex-1 truncate font-semibold">
+                    {x.quizzes?.title || "Quiz"}
+                  </span>
+                  {x.status === "graded" ? (
+                    <span className="chip chip-g">{x.score}</span>
+                  ) : (
+                    <span className="chip chip-n">{t("waitingTeacher")}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Teacher's note */}
+        <section className="callout h-fit p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <Icon name="message" size={18} className="text-[var(--acc-t)]" />
+            <h2 className="font-semibold">{t("noteCall")}</h2>
+          </div>
+          <p className="mt-3 whitespace-pre-wrap leading-relaxed">
+            {profile.teacher_note || t("noNote")}
+          </p>
+        </section>
       </div>
     </div>
   );
