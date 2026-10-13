@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { currentUser } from "@/lib/session";
+import { useSyncTick } from "@/lib/sync";
 import AppShell from "./AppShell";
+import SyncView from "./SyncView";
 
 const GROUPS = [
   {
@@ -55,12 +58,37 @@ const CHIPS = {
   "/admin/discussion": "Class chat room",
 };
 
-function Notice({ title, text, children }) {
+const TABLES = [
+  "payments",
+  "profiles",
+  "enrollments",
+  "quiz_submissions",
+  "attendance",
+  "live_classes",
+  "lessons",
+  "quizzes",
+  "certificates",
+];
+
+function modeFor(path) {
+  if (path.startsWith("/admin/attendance")) return "notify";
+  if (
+    path.startsWith("/admin/lessons") ||
+    path.startsWith("/admin/live-classes") ||
+    path.startsWith("/admin/certificates") ||
+    path.startsWith("/admin/discussion")
+  ) {
+    return "off";
+  }
+  return "auto";
+}
+
+function Notice({ icon, title, text, children }) {
   return (
     <div className="tx flex min-h-dvh items-center justify-center px-4">
       <div className="cd w-full max-w-md p-8 text-center">
         <p className="text-4xl" aria-hidden="true">
-          🔐
+          {icon}
         </p>
         <h1 className="mt-3 text-2xl font-extrabold">{title}</h1>
         <p className="mu mt-3 font-semibold leading-relaxed">{text}</p>
@@ -74,84 +102,132 @@ export default function AdminShell({ children }) {
   const router = useRouter();
   const path = usePathname();
   const isLogin = path === "/admin/login";
-  const [state, setState] = useState("loading"); // loading | ok | student | slow | error
+  const [state, setState] = useState("loading"); // loading | ok | student | problem
   const [name, setName] = useState("");
   const [badges, setBadges] = useState({});
-  const [tries, setTries] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  const started = useRef(false);
+  const tick = useSyncTick(TABLES, state === "ok" && !isLogin);
 
-  useEffect(() => {
-    if (isLogin) return;
-    let alive = true;
-
-    // If loading takes too long, show a helpful screen instead of "..."
-    const timer = setTimeout(() => {
-      if (alive) setState((s) => (s === "loading" ? "slow" : s));
-    }, 8000);
-
-    async function start() {
+  const load = useCallback(
+    async (silent) => {
+      const supabase = createClient();
       try {
-        const supabase = createClient();
-        const { data: u, error: userError } = await supabase.auth.getUser();
-        if (!alive) return;
-        if (userError || !u?.user) {
+        const user = await currentUser(supabase);
+        if (!user) {
+          if (typeof navigator !== "undefined" && navigator.onLine === false) {
+            if (!silent) setState("problem");
+            return;
+          }
           router.replace("/admin/login");
           return;
         }
 
-        const { data: p, error: profileError } = await supabase
-          .from("profiles")
-          .select("role, full_name")
-          .eq("id", u.user.id)
-          .single();
-        if (!alive) return;
-        if (profileError) {
-          setState("error");
+        let profile = null;
+        let failed = true;
+        for (let i = 0; i < 3 && failed; i++) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("role, full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (!error) {
+            profile = data;
+            failed = false;
+          } else {
+            await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+          }
+        }
+        if (failed || !profile) {
+          if (!silent) setState("problem");
           return;
         }
-        if (p?.role !== "admin") {
+        if (profile.role !== "admin") {
           setState("student");
           return;
         }
 
-        setName(p.full_name || "Admin");
+        setName(profile.full_name || "Admin");
         setState("ok");
 
-        const pay = await supabase
-          .from("payments")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending");
-        const enr = await supabase
-          .from("enrollments")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "new");
-        if (alive) {
-          setBadges({
-            "/admin/payments": pay.count || 0,
-            "/admin/enrollments": enr.count || 0,
-          });
-        }
+        const count = (q) => q.then((r) => r.count || 0);
+        const [pay, enr, newStudents, toGrade] = await Promise.all([
+          count(
+            supabase
+              .from("payments")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "pending"),
+          ),
+          count(
+            supabase
+              .from("enrollments")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "new"),
+          ),
+          count(
+            supabase
+              .from("profiles")
+              .select("id", { count: "exact", head: true })
+              .eq("role", "student")
+              .eq("status", "pending"),
+          ),
+          count(
+            supabase
+              .from("quiz_submissions")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "submitted"),
+          ),
+        ]);
+        setBadges({
+          "/admin/payments": pay,
+          "/admin/enrollments": enr,
+          "/admin/dashboard": newStudents,
+          "/admin/quizzes": toGrade,
+        });
       } catch {
-        if (alive) setState("error");
+        if (!silent) setState("problem");
       }
-    }
-    start();
+    },
+    [router],
+  );
 
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, [path, isLogin, router, tries]);
+  useEffect(() => {
+    if (isLogin) return;
+    started.current = true;
+    load(false);
+  }, [load, attempt, isLogin]);
+
+  useEffect(() => {
+    if (!isLogin && started.current && state === "ok") load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path]);
+  useEffect(() => {
+    if (tick > 0 && !isLogin) load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick]);
+
+  // If loading takes too long, show a helpful screen instead of "..."
+  useEffect(() => {
+    if (isLogin || state !== "loading") return;
+    const timer = setTimeout(
+      () => setState((s) => (s === "loading" ? "problem" : s)),
+      10000,
+    );
+    return () => clearTimeout(timer);
+  }, [state, isLogin, attempt]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" && !isLogin) router.replace("/admin/login");
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router, isLogin]);
 
   async function logout() {
     const supabase = createClient();
-    await supabase.auth.signOut();
-    setState("loading");
+    await supabase.auth.signOut({ scope: "local" }); // only this device
     router.replace("/admin/login");
-  }
-
-  function retry() {
-    setState("loading");
-    setTries((n) => n + 1);
   }
 
   if (isLogin) return children;
@@ -159,6 +235,7 @@ export default function AdminShell({ children }) {
   if (state === "student") {
     return (
       <Notice
+        icon="🔐"
         title="You are signed in as a student"
         text="This browser is logged in with a student account, so the teacher area stays closed. Log out, then sign in with your teacher email."
       >
@@ -172,13 +249,20 @@ export default function AdminShell({ children }) {
     );
   }
 
-  if (state === "slow" || state === "error") {
+  if (state === "problem") {
     return (
       <Notice
-        title="The admin area did not load"
-        text="Check your internet connection and try again. If it keeps happening, sign in again."
+        icon="📡"
+        title="Connection problem"
+        text="We could not reach the server. Your login is safe. Check your internet and try again."
       >
-        <button onClick={retry} className="btn w-full">
+        <button
+          onClick={() => {
+            setState("loading");
+            setAttempt((n) => n + 1);
+          }}
+          className="btn w-full"
+        >
           Try again
         </button>
         <button onClick={logout} className="btn2 w-full">
@@ -231,7 +315,14 @@ export default function AdminShell({ children }) {
         ["Telegram", "https://t.me/NAFYADWJ", true],
       ]}
     >
-      {children}
+      <SyncView
+        tick={tick}
+        resetKey={path}
+        mode={modeFor(path)}
+        labels={{ msg: "New updates are ready", btn: "Refresh" }}
+      >
+        {children}
+      </SyncView>
     </AppShell>
   );
 }

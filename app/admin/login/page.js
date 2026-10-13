@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -10,6 +10,29 @@ export default function AdminLogin() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already logged in as the teacher? Go straight to the dashboard.
+  useEffect(() => {
+    let alive = true;
+    async function check() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getSession();
+        const user = data?.session?.user;
+        if (!user || !alive) return;
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (alive && p?.role === "admin") router.replace("/admin/dashboard");
+      } catch {}
+    }
+    check();
+    return () => {
+      alive = false;
+    };
+  }, [router]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -37,7 +60,7 @@ export default function AdminLogin() {
       .eq("id", data.user.id)
       .single();
     if (profile?.role !== "admin") {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       setError("This account is not allowed here.");
       setLoading(false);
       return;
@@ -61,11 +84,23 @@ export default function AdminLogin() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="lbl">Admin email</label>
-            <input name="email" type="email" required className="field" />
+            <input
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="field"
+            />
           </div>
           <div>
             <label className="lbl">Password</label>
-            <input name="password" type="password" required className="field" />
+            <input
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              className="field"
+            />
           </div>
           {error && <p className="err">{error}</p>}
           <button type="submit" disabled={loading} className="btn w-full">

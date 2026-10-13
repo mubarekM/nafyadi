@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -12,6 +12,31 @@ export default function Login() {
   const { t } = usePrefs();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already logged in? Go straight to the student page.
+  useEffect(() => {
+    let alive = true;
+    async function check() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getSession();
+        const user = data?.session?.user;
+        if (!user || !alive) return;
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("role, status")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (alive && p?.role === "student" && p?.status === "approved") {
+          router.replace("/student");
+        }
+      } catch {}
+    }
+    check();
+    return () => {
+      alive = false;
+    };
+  }, [router]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -41,19 +66,19 @@ export default function Login() {
       .single();
 
     if (profile?.role === "admin") {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       setError("errAdmin");
       setLoading(false);
       return;
     }
     if (profile?.status === "pending") {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       setError("errPending");
       setLoading(false);
       return;
     }
     if (profile?.status === "rejected") {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       setError("errRejected");
       setLoading(false);
       return;
@@ -70,11 +95,23 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div>
           <label className="lbl">{t("email")}</label>
-          <input name="email" type="email" required className="field" />
+          <input
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            className="field"
+          />
         </div>
         <div>
           <label className="lbl">{t("password")}</label>
-          <input name="password" type="password" required className="field" />
+          <input
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            className="field"
+          />
         </div>
 
         {error && <p className="err">{t(error)}</p>}
@@ -86,7 +123,7 @@ export default function Login() {
 
       <p className="mu mt-8 text-center text-sm font-bold">
         {t("newHere")}{" "}
-        <Link href="/signup" className="pr hover:underline">
+        <Link href="/signup" className="pr font-extrabold underline">
           {t("createAcc")}
         </Link>
       </p>
