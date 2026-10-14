@@ -13,41 +13,51 @@ const GROUPS = [
   {
     key: "people",
     label: "People",
-    icon: "👥",
+    icon: "users",
     children: [
-      { href: "/admin/dashboard", label: "Students", icon: "👥" },
-      { href: "/admin/enrollments", label: "Enrollments", icon: "📩" },
+      { href: "/admin/dashboard", label: "Students", icon: "users" },
+      { href: "/admin/enrollments", label: "Enrollments", icon: "mail" },
     ],
   },
   {
     key: "learn",
     label: "Learning",
-    icon: "📚",
+    icon: "book",
     children: [
-      { href: "/admin/lessons", label: "Lessons", icon: "📚" },
-      { href: "/admin/quizzes", label: "Quizzes", icon: "📝" },
-      { href: "/admin/live-classes", label: "Live Classes", icon: "🎥" },
-      { href: "/admin/attendance", label: "Attendance", icon: "✅" },
+      { href: "/admin/lessons", label: "Lessons", icon: "book" },
+      { href: "/admin/quizzes", label: "Quizzes", icon: "clipboard" },
+      { href: "/admin/live-classes", label: "Live Classes", icon: "video" },
+      { href: "/admin/attendance", label: "Attendance", icon: "checkCircle" },
+    ],
+  },
+  {
+    key: "comm",
+    label: "Community",
+    icon: "message",
+    children: [
+      { href: "/admin/announcements", label: "Announcements", icon: "message" },
+      { href: "/admin/discussion", label: "Discussion", icon: "message" },
     ],
   },
   {
     key: "pay",
     label: "Business",
-    icon: "💳",
+    icon: "card",
     children: [
-      { href: "/admin/payments", label: "Payments", icon: "💳" },
-      { href: "/admin/certificates", label: "Certificates", icon: "🎓" },
-      { href: "/admin/export", label: "Reports and export", icon: "📈" },
+      { href: "/admin/payments", label: "Payments", icon: "card" },
+      { href: "/admin/certificates", label: "Certificates", icon: "award" },
+      { href: "/admin/export", label: "Reports and export", icon: "chart" },
+      { href: "/admin/privacy", label: "Privacy tools", icon: "shield" },
     ],
   },
-  { key: "chat", label: "Discussion", icon: "💬", href: "/admin/discussion" },
+  { key: "acc", label: "My account", icon: "user", href: "/admin/account" },
 ];
 
 const TABS = [
-  { href: "/admin/dashboard", icon: "👥", label: "Students" },
-  { href: "/admin/payments", icon: "💳", label: "Payments" },
-  { href: "/admin/lessons", icon: "📚", label: "Lessons" },
-  { href: "/admin/quizzes", icon: "📝", label: "Quizzes" },
+  { href: "/admin/dashboard", icon: "users", label: "Students" },
+  { href: "/admin/payments", icon: "card", label: "Payments" },
+  { href: "/admin/lessons", icon: "book", label: "Lessons" },
+  { href: "/admin/quizzes", icon: "clipboard", label: "Quizzes" },
 ];
 
 const TABLES = [
@@ -69,7 +79,10 @@ function modeFor(path) {
     path.startsWith("/admin/live-classes") ||
     path.startsWith("/admin/certificates") ||
     path.startsWith("/admin/discussion") ||
-    path.startsWith("/admin/export")
+    path.startsWith("/admin/export") ||
+    path.startsWith("/admin/announcements") ||
+    path.startsWith("/admin/privacy") ||
+    path.startsWith("/admin/account")
   ) {
     return "off";
   }

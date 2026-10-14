@@ -7,7 +7,7 @@ import Controls from "./Controls";
 import Icon from "./Icon";
 import { usePrefs } from "@/lib/prefs";
 
-// The shells pass emoji as icon names; they are shown as line icons here
+// Icons can be passed as a name ("user") or as an old emoji key
 const ICON_OF = {
   "🏠": "home",
   "📚": "book",
@@ -21,7 +21,7 @@ const ICON_OF = {
   "📩": "mail",
   "✅": "checkCircle",
 };
-const ico = (e) => ICON_OF[e] || "info";
+const ico = (e) => ICON_OF[e] || e;
 
 const SECTIONS = {
   s: {
@@ -29,23 +29,24 @@ const SECTIONS = {
     course: "secLearning",
     sessions: "secLearning",
     certs: "secLearning",
-    pay: "secAccount",
     chat: "secCommunity",
+    pay: "secAccount",
+    acc: "secAccount",
   },
   a: {
     people: "secPeople",
     learn: "secTeaching",
+    comm: "secCommunity",
     pay: "secBusiness",
-    cert: "secBusiness",
-    chat: "secCommunity",
+    acc: "secAccount",
   },
 };
 
 export default function AppShell({
   brand,
   tag,
-  groups = [],
-  tabs = [],
+  groups,
+  tabs,
   badges = {},
   user,
   crumbs = [],
@@ -87,10 +88,7 @@ export default function AppShell({
     (g.children || []).reduce((n, c) => n + (badges[c.href] || 0), 0);
   const overflow = flat.filter((it) => !tabs.some((x) => x.href === it.href));
   const moreActive = overflow.some(isOn);
-
-  // Safe fallback to prevent undefined href prop errors in Link components
-  const home = groups?.[0]?.href || "/";
-
+  const home = groups[0].href;
   const initial = (user?.name || "?").charAt(0).toUpperCase();
 
   const badge = (n) =>
@@ -141,7 +139,7 @@ export default function AppShell({
           className="flex-1 overflow-y-auto px-3 pb-4 pt-2"
         >
           {groups.map((g) => {
-            const sec = SECTIONS[kind]?.[g.key];
+            const sec = SECTIONS[kind][g.key];
             const label = sec && sec !== lastSection ? t(sec) : null;
             if (sec) lastSection = sec;
             return (
@@ -255,9 +253,7 @@ export default function AppShell({
                   />
                 )}
                 <span
-                  className={`truncate ${
-                    i === crumbs.length - 1 ? "tx font-semibold" : "mu"
-                  }`}
+                  className={`truncate ${i === crumbs.length - 1 ? "tx font-semibold" : "mu"}`}
                 >
                   {c}
                 </span>
@@ -416,3 +412,4 @@ export default function AppShell({
     </div>
   );
 }
+  

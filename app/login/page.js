@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import AuthShell from "@/components/AuthShell";
+import Icon from "@/components/Icon";
 
 export default function Login() {
   const router = useRouter();
@@ -89,8 +90,8 @@ export default function Login() {
 
   return (
     <AuthShell>
-      <h1 className="text-4xl font-extrabold">{t("loginTitle")}</h1>
-      <p className="mu mt-2 font-semibold">{t("loginSub")}</p>
+      <h1 className="display text-4xl">{t("loginTitle")}</h1>
+      <p className="mu mt-2">{t("loginSub")}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div>
@@ -121,9 +122,31 @@ export default function Login() {
         </button>
       </form>
 
-      <p className="mu mt-8 text-center text-sm font-bold">
+      <div className="callout mt-6 flex items-start gap-3 p-4 text-sm">
+        <Icon
+          name="info"
+          size={18}
+          className="mt-0.5 shrink-0 text-[var(--pri)]"
+        />
+        <p>
+          <span className="font-semibold">{t("forgotQ")}</span> {t("forgotA")}{" "}
+          <a
+            href="https://t.me/NAFYADWJ"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pr font-semibold underline underline-offset-4"
+          >
+            {t("tg")}
+          </a>
+        </p>
+      </div>
+
+      <p className="mu mt-8 text-center text-sm">
         {t("newHere")}{" "}
-        <Link href="/signup" className="pr font-extrabold underline">
+        <Link
+          href="/signup"
+          className="pr font-semibold underline underline-offset-4"
+        >
           {t("createAcc")}
         </Link>
       </p>

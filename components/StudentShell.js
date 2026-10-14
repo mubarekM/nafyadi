@@ -48,16 +48,17 @@ export function fmtDate(lang, iso) {
   }
 }
 
-// path -> [breadcrumb keys, subtitle key]
+// path -> [breadcrumb keys]
 const PAGES = {
-  "/student": { c: [], s: "subHome" },
-  "/student/lessons": { c: ["navCourse", "navLessons"], s: "subLessons" },
-  "/student/quizzes": { c: ["navCourse", "navQuizzes"], s: "subQuizzes" },
-  "/student/progress": { c: ["navCourse", "navProgress"], s: "subProgress" },
-  "/student/live-class": { c: ["navSessions"], s: "subSessions" },
-  "/student/certificates": { c: ["navCerts"], s: "subCerts" },
-  "/student/payments": { c: ["navPay"], s: "subPay" },
-  "/student/discussion": { c: ["navChat"], s: "subChat" },
+  "/student": [],
+  "/student/lessons": ["navCourse", "navLessons"],
+  "/student/quizzes": ["navCourse", "navQuizzes"],
+  "/student/progress": ["navCourse", "navProgress"],
+  "/student/live-class": ["navSessions"],
+  "/student/certificates": ["navCerts"],
+  "/student/payments": ["navPay"],
+  "/student/discussion": ["navChat"],
+  "/student/account": ["navAccount"],
 };
 
 const TABLES = [
@@ -69,6 +70,7 @@ const TABLES = [
   "live_classes",
   "certificates",
   "attendance",
+  "announcements",
 ];
 
 function modeFor(path) {
@@ -77,7 +79,11 @@ function modeFor(path) {
     path.startsWith("/student/quizzes")
   )
     return "notify";
-  if (path.startsWith("/student/discussion")) return "off";
+  if (
+    path.startsWith("/student/discussion") ||
+    path.startsWith("/student/account")
+  )
+    return "off";
   return "auto";
 }
 
@@ -206,49 +212,55 @@ export default function StudentShell({ children }) {
     {
       key: "home",
       label: t("navHome"),
-      icon: "🏠",
+      icon: "home",
       href: "/student",
       exact: true,
     },
     {
       key: "course",
       label: t("navCourse"),
-      icon: "📚",
+      icon: "book",
       children: [
-        { href: "/student/lessons", label: t("navLessons"), icon: "📚" },
-        { href: "/student/quizzes", label: t("navQuizzes"), icon: "📝" },
-        { href: "/student/progress", label: t("navProgress"), icon: "📈" },
+        { href: "/student/lessons", label: t("navLessons"), icon: "book" },
+        { href: "/student/quizzes", label: t("navQuizzes"), icon: "clipboard" },
+        { href: "/student/progress", label: t("navProgress"), icon: "chart" },
       ],
     },
     {
       key: "sessions",
       label: t("navSessions"),
-      icon: "🎥",
+      icon: "video",
       href: "/student/live-class",
     },
     {
       key: "certs",
       label: t("navCerts"),
-      icon: "🎓",
+      icon: "award",
       href: "/student/certificates",
     },
-    { key: "pay", label: t("navPay"), icon: "💳", href: "/student/payments" },
     {
       key: "chat",
       label: t("navChat"),
-      icon: "💬",
+      icon: "message",
       href: "/student/discussion",
+    },
+    { key: "pay", label: t("navPay"), icon: "card", href: "/student/payments" },
+    {
+      key: "acc",
+      label: t("navAccount"),
+      icon: "user",
+      href: "/student/account",
     },
   ];
 
   const tabs = [
-    { href: "/student", exact: true, icon: "🏠", label: t("navHome") },
-    { href: "/student/lessons", icon: "📚", label: t("navLessons") },
-    { href: "/student/quizzes", icon: "📝", label: t("navQuizzes") },
-    { href: "/student/live-class", icon: "🎥", label: t("navSessions") },
+    { href: "/student", exact: true, icon: "home", label: t("navHome") },
+    { href: "/student/lessons", icon: "book", label: t("navLessons") },
+    { href: "/student/quizzes", icon: "clipboard", label: t("navQuizzes") },
+    { href: "/student/live-class", icon: "video", label: t("navSessions") },
   ];
 
-  const page = PAGES[path] || PAGES["/student"];
+  const crumbKeys = PAGES[path] || [];
 
   return (
     <Ctx.Provider value={me}>
@@ -261,7 +273,7 @@ export default function StudentShell({ children }) {
           name: me.profile.full_name || "",
           sub: lvLabel(t, me.profile.english_level),
         }}
-        crumbs={[t("crumbHome"), ...page.c.map((k) => t(k))]}
+        crumbs={[t("crumbHome"), ...crumbKeys.map((k) => t(k))]}
         moreLabel={t("navMore")}
         logoutLabel={t("logout")}
         onLogout={logout}

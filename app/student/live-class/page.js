@@ -9,6 +9,7 @@ import JoinButton from "@/components/JoinButton";
 import Icon from "@/components/Icon";
 import { PageHead, Stat, Panel, Empty } from "@/components/ui";
 import { GROUPS, LIVE } from "@/lib/schedule";
+import { downloadIcs } from "@/lib/ics";
 
 const ATTENDED = ["joined", "present", "late"];
 const LABEL = {
@@ -149,7 +150,16 @@ export default function StudentLiveClass() {
                         {lvLabel(t, c.level)}
                       </span>
                     </div>
-                    <JoinButton cls={c} />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => downloadIcs(c)}
+                        className="btn-ghost"
+                      >
+                        <Icon name="calendar" size={14} />
+                        {t("addCal")}
+                      </button>
+                      <JoinButton cls={c} />
+                    </div>
                   </div>
                   {c.notes && (
                     <p className="mu mt-3 whitespace-pre-wrap text-sm">

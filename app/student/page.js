@@ -26,6 +26,8 @@ export default function StudentHome() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  const shortDay = (iso) =>
+    new Date(iso).toLocaleDateString(loc, { day: "numeric", month: "short" });
   const line = { borderColor: "var(--ln)" };
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function StudentHome() {
       const mine = (x) =>
         x.level === "All levels" || x.level === profile.english_level;
 
-      const [c, l, v, q, s, p] = await Promise.all([
+      const [c, l, v, q, s, p, a] = await Promise.all([
         supabase
           .from("live_classes")
           .select("*")
@@ -60,6 +62,13 @@ export default function StudentHome() {
           .select("month, status")
           .eq("student_id", id)
           .eq("month", ym),
+        supabase
+          .from("announcements")
+          .select("*")
+          .eq("active", true)
+          .order("pinned", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(10),
       ]);
 
       const lessons = (l.data || []).filter(mine);
@@ -76,6 +85,7 @@ export default function StudentHome() {
         done: lessons.filter((x) => opened.has(x.id)).length,
         todo: quizzes.filter((x) => !doneQuiz.has(x.id)).length,
         subs: subs.slice(0, 4),
+        ann: (a.data || []).filter(mine).slice(0, 3),
         pay: pays.some((x) => x.status === "approved")
           ? "paid"
           : pays.some((x) => x.status === "pending")
@@ -111,6 +121,33 @@ export default function StudentHome() {
           {t("levelIs")}: {lvLabel(t, profile.english_level)}
         </p>
       </div>
+
+      {/* Announcements from the teacher */}
+      {d && d.ann.length > 0 && (
+        <section className="space-y-3" aria-label={t("annT")}>
+          {d.ann.map((x) => (
+            <article key={x.id} className="callout p-4 sm:p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <Icon
+                  name="message"
+                  size={18}
+                  className="text-[var(--acc-t)]"
+                />
+                <h2 className="font-semibold">{x.title}</h2>
+                {x.pinned && (
+                  <span className="chip chip-y">{t("annPinned")}</span>
+                )}
+                <span className="mu ml-auto text-xs">
+                  {shortDay(x.created_at)}
+                </span>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap leading-relaxed">
+                {x.body}
+              </p>
+            </article>
+          ))}
+        </section>
+      )}
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

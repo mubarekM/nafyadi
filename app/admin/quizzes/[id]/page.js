@@ -86,6 +86,27 @@ function QuizAnswers() {
     setSavingId(null);
   }
 
+  // Deletes this answer so the student can do the quiz again
+  async function allowRetake(sub, name) {
+    if (
+      !confirm(
+        `Let ${name || "this student"} do this quiz again? Their current answers and grade will be deleted.`,
+      )
+    ) {
+      return;
+    }
+    setMessage("");
+    setSavingId(sub.id);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("quiz_submissions")
+      .delete()
+      .eq("id", sub.id);
+    if (error) setMessage("Could not do that: " + error.message);
+    else await load();
+    setSavingId(null);
+  }
+
   if (!data) return <p className="mu font-semibold">...</p>;
 
   const { quiz, questions, subs, names } = data;
@@ -182,17 +203,26 @@ function QuizAnswers() {
                 </div>
               </div>
 
-              <button
-                onClick={() => saveGrade(s)}
-                disabled={savingId === s.id}
-                className="btn mt-4"
-              >
-                {savingId === s.id
-                  ? "Saving..."
-                  : s.status === "graded"
-                    ? "Update grade"
-                    : "Save grade"}
-              </button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => saveGrade(s)}
+                  disabled={savingId === s.id}
+                  className="btn"
+                >
+                  {savingId === s.id
+                    ? "Saving..."
+                    : s.status === "graded"
+                      ? "Update grade"
+                      : "Save grade"}
+                </button>
+                <button
+                  onClick={() => allowRetake(s, student?.full_name)}
+                  disabled={savingId === s.id}
+                  className="btn-ghost"
+                >
+                  Allow retake
+                </button>
+              </div>
             </article>
           );
         })}
