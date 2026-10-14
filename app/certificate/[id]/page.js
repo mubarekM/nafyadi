@@ -4,6 +4,9 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { currentUser } from "@/lib/session";
+import Icon from "@/components/Icon";
+import Notice from "@/components/Notice";
 
 function Certificate() {
   const { id } = useParams();
@@ -12,8 +15,8 @@ function Certificate() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) {
+      const user = await currentUser(supabase);
+      if (!user) {
         setS({ loading: false, denied: true });
         return;
       }
@@ -34,7 +37,7 @@ function Certificate() {
       const { data: me } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", u.user.id)
+        .eq("id", user.id)
         .maybeSingle();
       setS({
         loading: false,
@@ -48,7 +51,7 @@ function Certificate() {
 
   if (s.loading) {
     return (
-      <div className="tx flex min-h-dvh items-center justify-center font-bold">
+      <div className="tx flex min-h-dvh items-center justify-center font-semibold">
         ...
       </div>
     );
@@ -56,16 +59,19 @@ function Certificate() {
 
   if (s.denied || s.missing) {
     return (
-      <div className="tx flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-xl font-extrabold">
-          {s.denied
-            ? "Please log in to see this certificate."
-            : "Certificate not found."}
-        </p>
-        <Link href="/login" className="btn">
+      <Notice
+        icon="lock"
+        title={s.denied ? "Please log in" : "Certificate not found"}
+        text={
+          s.denied
+            ? "Log in to see this certificate."
+            : "This certificate does not exist, or it belongs to someone else."
+        }
+      >
+        <Link href="/login" className="btn w-full">
           Go to login
         </Link>
-      </div>
+      </Notice>
     );
   }
 
@@ -75,19 +81,23 @@ function Certificate() {
     month: "long",
     day: "numeric",
   });
-  const serif = "Georgia, 'Times New Roman', serif";
+  const serif = "var(--font-serif), Georgia, 'Times New Roman', serif";
+  const green = "#0b4a38";
+  const gold = "#c4921a";
 
   return (
     <div className="cert-page tx min-h-dvh px-4 py-6 sm:py-10">
       <div className="no-print mx-auto mb-6 flex max-w-4xl items-center justify-between gap-3">
         <Link
-          href={admin ? "/admin/certificates" : "/student/progress"}
+          href={admin ? "/admin/certificates" : "/student/certificates"}
           className="btn-ghost"
         >
-          ← Back
+          <Icon name="chevronRight" size={16} className="rotate-180" />
+          Back
         </Link>
         <button onClick={() => window.print()} className="btn">
-          🖨️ Print / Save as PDF
+          <Icon name="file" size={16} />
+          Print / Save as PDF
         </button>
       </div>
 
@@ -97,13 +107,20 @@ function Certificate() {
       >
         <div
           className="relative w-full overflow-hidden bg-white shadow-2xl"
-          style={{ aspectRatio: "1.414 / 1", color: "#0f172a" }}
+          style={{ aspectRatio: "1.414 / 1", color: "#0e1a15" }}
         >
           <div
             style={{
               position: "absolute",
               inset: "2.2cqw",
-              border: "0.7cqw double #1d4ed8",
+              border: `0.5cqw solid ${green}`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: "3.4cqw",
+              border: `0.15cqw solid ${gold}`,
             }}
           />
           <div
@@ -121,10 +138,10 @@ function Certificate() {
           >
             <p
               style={{
-                fontSize: "1.9cqw",
+                fontSize: "1.7cqw",
                 letterSpacing: "0.35em",
-                fontWeight: 800,
-                color: "#f97316",
+                fontWeight: 700,
+                color: gold,
               }}
             >
               ENGLISH WITH NAFYAD
@@ -132,9 +149,9 @@ function Certificate() {
             <h1
               style={{
                 fontFamily: serif,
-                fontSize: "5.4cqw",
-                fontWeight: 800,
-                color: "#1d4ed8",
+                fontSize: "5.2cqw",
+                fontWeight: 600,
+                color: green,
                 lineHeight: 1.1,
               }}
             >
@@ -143,7 +160,7 @@ function Certificate() {
             <p
               style={{
                 fontSize: "1.8cqw",
-                color: "#475569",
+                color: "#46564f",
                 marginTop: "1cqw",
               }}
             >
@@ -154,9 +171,9 @@ function Certificate() {
                 fontFamily: serif,
                 fontStyle: "italic",
                 fontSize: "6cqw",
-                fontWeight: 700,
+                fontWeight: 600,
                 padding: "0 3cqw 0.5cqw",
-                borderBottom: "0.25cqw solid #f97316",
+                borderBottom: `0.25cqw solid ${gold}`,
                 lineHeight: 1.15,
               }}
             >
@@ -165,13 +182,13 @@ function Certificate() {
             <p
               style={{
                 fontSize: "1.8cqw",
-                color: "#475569",
+                color: "#46564f",
                 marginTop: "1cqw",
               }}
             >
               for successfully completing
             </p>
-            <p style={{ fontSize: "3cqw", fontWeight: 800, lineHeight: 1.2 }}>
+            <p style={{ fontSize: "3cqw", fontWeight: 700, lineHeight: 1.2 }}>
               {cert.title}
             </p>
 
@@ -186,19 +203,19 @@ function Certificate() {
               }}
             >
               <div style={{ textAlign: "left" }}>
-                <p style={{ fontSize: "1.9cqw", fontWeight: 800 }}>{date}</p>
-                <p style={{ fontSize: "1.3cqw", color: "#64748b" }}>
+                <p style={{ fontSize: "1.9cqw", fontWeight: 700 }}>{date}</p>
+                <p style={{ fontSize: "1.3cqw", color: "#6b7a73" }}>
                   Date of issue
                 </p>
               </div>
               <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: "1.3cqw", color: "#64748b" }}>
+                <p style={{ fontSize: "1.3cqw", color: "#6b7a73" }}>
                   Certificate ID
                 </p>
                 <p
                   style={{
                     fontSize: "1.7cqw",
-                    fontWeight: 800,
+                    fontWeight: 700,
                     letterSpacing: "0.1em",
                   }}
                 >
@@ -211,13 +228,13 @@ function Certificate() {
                     fontFamily: serif,
                     fontStyle: "italic",
                     fontSize: "3cqw",
-                    borderBottom: "0.2cqw solid #0f172a",
+                    borderBottom: "0.2cqw solid #0e1a15",
                     padding: "0 2cqw",
                   }}
                 >
                   Nafyad WJ
                 </p>
-                <p style={{ fontSize: "1.3cqw", color: "#64748b" }}>
+                <p style={{ fontSize: "1.3cqw", color: "#6b7a73" }}>
                   English Teacher
                 </p>
               </div>
@@ -233,7 +250,7 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="tx flex min-h-dvh items-center justify-center font-bold">
+        <div className="tx flex min-h-dvh items-center justify-center font-semibold">
           ...
         </div>
       }

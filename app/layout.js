@@ -1,6 +1,7 @@
 import { Public_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/lib/prefs";
+import { SITE_URL } from "@/lib/site";
 import SkipLink from "@/components/SkipLink";
 
 const sans = Public_Sans({
@@ -15,9 +16,18 @@ const serif = Source_Serif_4({
 });
 
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "English with Nafyad | Live English Classes",
   description:
-    "Speak English with confidence. Live, step-by-step classes with Teacher Nafyad WJ.",
+    "Speak English with confidence. Live, step-by-step classes with Teacher Nafyad WJ for kids, teens and adults.",
+  openGraph: {
+    title: "English with Nafyad | Live English Classes",
+    description:
+      "Live, step-by-step English classes for kids, teens and adults.",
+    siteName: "English with Nafyad",
+    type: "website",
+  },
+  appleWebApp: { capable: true, title: "Nafyad", statusBarStyle: "default" },
 };
 
 export const viewport = {

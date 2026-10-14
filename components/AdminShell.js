@@ -7,6 +7,7 @@ import { currentUser } from "@/lib/session";
 import { useSyncTick } from "@/lib/sync";
 import AppShell from "./AppShell";
 import SyncView from "./SyncView";
+import Notice from "./Notice";
 
 const GROUPS = [
   {
@@ -29,12 +30,15 @@ const GROUPS = [
       { href: "/admin/attendance", label: "Attendance", icon: "✅" },
     ],
   },
-  { key: "pay", label: "Payments", icon: "💳", href: "/admin/payments" },
   {
-    key: "cert",
-    label: "Certificates",
-    icon: "🎓",
-    href: "/admin/certificates",
+    key: "pay",
+    label: "Business",
+    icon: "💳",
+    children: [
+      { href: "/admin/payments", label: "Payments", icon: "💳" },
+      { href: "/admin/certificates", label: "Certificates", icon: "🎓" },
+      { href: "/admin/export", label: "Reports and export", icon: "📈" },
+    ],
   },
   { key: "chat", label: "Discussion", icon: "💬", href: "/admin/discussion" },
 ];
@@ -45,18 +49,6 @@ const TABS = [
   { href: "/admin/lessons", icon: "📚", label: "Lessons" },
   { href: "/admin/quizzes", icon: "📝", label: "Quizzes" },
 ];
-
-const CHIPS = {
-  "/admin/dashboard": "Approve, notes, groups and passwords",
-  "/admin/enrollments": "Requests from your home page",
-  "/admin/lessons": "Weeks, videos, notes and private files",
-  "/admin/quizzes": "Create quizzes and grade answers",
-  "/admin/live-classes": "Schedule your live classes",
-  "/admin/attendance": "Who joined your live classes",
-  "/admin/payments": "Review payment screenshots",
-  "/admin/certificates": "Issue certificates",
-  "/admin/discussion": "Class chat room",
-};
 
 const TABLES = [
   "payments",
@@ -76,26 +68,12 @@ function modeFor(path) {
     path.startsWith("/admin/lessons") ||
     path.startsWith("/admin/live-classes") ||
     path.startsWith("/admin/certificates") ||
-    path.startsWith("/admin/discussion")
+    path.startsWith("/admin/discussion") ||
+    path.startsWith("/admin/export")
   ) {
     return "off";
   }
   return "auto";
-}
-
-function Notice({ icon, title, text, children }) {
-  return (
-    <div className="tx flex min-h-dvh items-center justify-center px-4">
-      <div className="cd w-full max-w-md p-8 text-center">
-        <p className="text-4xl" aria-hidden="true">
-          {icon}
-        </p>
-        <h1 className="mt-3 text-2xl font-extrabold">{title}</h1>
-        <p className="mu mt-3 font-semibold leading-relaxed">{text}</p>
-        <div className="mt-6 flex flex-col gap-3">{children}</div>
-      </div>
-    </div>
-  );
 }
 
 export default function AdminShell({ children }) {
@@ -235,7 +213,7 @@ export default function AdminShell({ children }) {
   if (state === "student") {
     return (
       <Notice
-        icon="🔐"
+        icon="lock"
         title="You are signed in as a student"
         text="This browser is logged in with a student account, so the teacher area stays closed. Log out, then sign in with your teacher email."
       >
@@ -252,7 +230,7 @@ export default function AdminShell({ children }) {
   if (state === "problem") {
     return (
       <Notice
-        icon="📡"
+        icon="alert"
         title="Connection problem"
         text="We could not reach the server. Your login is safe. Check your internet and try again."
       >
@@ -274,7 +252,7 @@ export default function AdminShell({ children }) {
 
   if (state !== "ok") {
     return (
-      <div className="tx flex min-h-dvh items-center justify-center font-bold">
+      <div className="tx flex min-h-dvh items-center justify-center font-semibold">
         ...
       </div>
     );
@@ -282,17 +260,12 @@ export default function AdminShell({ children }) {
 
   // Breadcrumbs: Admin > Group > Page
   let crumbs = ["Admin"];
-  let chip = "";
   for (const g of GROUPS) {
     if (g.children) {
       const c = g.children.find((x) => path.startsWith(x.href));
-      if (c) {
-        crumbs = ["Admin", g.label, c.label];
-        chip = CHIPS[c.href] || "";
-      }
+      if (c) crumbs = ["Admin", g.label, c.label];
     } else if (path.startsWith(g.href)) {
       crumbs = ["Admin", g.label];
-      chip = CHIPS[g.href] || "";
     }
   }
 
@@ -305,7 +278,6 @@ export default function AdminShell({ children }) {
       badges={badges}
       user={{ name, sub: "Teacher" }}
       crumbs={crumbs}
-      chip={chip}
       moreLabel="More"
       logoutLabel="Log out"
       onLogout={logout}

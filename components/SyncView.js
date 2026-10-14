@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon";
 
 // mode "auto"   = refresh by itself when it is safe
 // mode "notify" = show a small "Refresh" bar instead
@@ -106,7 +107,10 @@ export default function SyncView({
           role="status"
           className="cd fixed bottom-24 left-1/2 z-[60] flex w-[92%] max-w-md -translate-x-1/2 items-center justify-between gap-3 p-3 shadow-2xl lg:bottom-6"
         >
-          <span className="text-sm font-extrabold">🔄 {labels.msg}</span>
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Icon name="info" size={16} className="text-[var(--pri)]" />
+            {labels.msg}
+          </span>
           <button onClick={refreshNow} className="btn sm shrink-0">
             {labels.btn}
           </button>

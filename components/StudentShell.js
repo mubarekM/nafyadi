@@ -15,6 +15,7 @@ import { currentUser } from "@/lib/session";
 import { useSyncTick } from "@/lib/sync";
 import AppShell from "./AppShell";
 import SyncView from "./SyncView";
+import Notice from "./Notice";
 
 const Ctx = createContext(null);
 export const useStudent = () => useContext(Ctx);
@@ -176,35 +177,26 @@ export default function StudentShell({ children }) {
 
   if (problem && !me) {
     return (
-      <div className="tx flex min-h-dvh items-center justify-center px-4">
-        <div className="cd w-full max-w-md p-8 text-center">
-          <p className="text-4xl" aria-hidden="true">
-            📡
-          </p>
-          <h1 className="mt-3 text-2xl font-extrabold">{t("connT")}</h1>
-          <p className="mu mt-3 font-semibold leading-relaxed">{t("connD")}</p>
-          <div className="mt-6 flex flex-col gap-3">
-            <button
-              onClick={() => {
-                setProblem(false);
-                setAttempt((n) => n + 1);
-              }}
-              className="btn w-full"
-            >
-              {t("connRetry")}
-            </button>
-            <button onClick={logout} className="btn2 w-full">
-              {t("logout")}
-            </button>
-          </div>
-        </div>
-      </div>
+      <Notice icon="alert" title={t("connT")} text={t("connD")}>
+        <button
+          onClick={() => {
+            setProblem(false);
+            setAttempt((n) => n + 1);
+          }}
+          className="btn w-full"
+        >
+          {t("connRetry")}
+        </button>
+        <button onClick={logout} className="btn2 w-full">
+          {t("logout")}
+        </button>
+      </Notice>
     );
   }
 
   if (!me) {
     return (
-      <div className="tx flex min-h-dvh items-center justify-center font-bold">
+      <div className="tx flex min-h-dvh items-center justify-center font-semibold">
         ...
       </div>
     );
@@ -270,7 +262,6 @@ export default function StudentShell({ children }) {
           sub: lvLabel(t, me.profile.english_level),
         }}
         crumbs={[t("crumbHome"), ...page.c.map((k) => t(k))]}
-        chip={t(page.s)}
         moreLabel={t("navMore")}
         logoutLabel={t("logout")}
         onLogout={logout}
