@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Panel, Empty } from "@/components/ui";
 
 const LEVELS = [
   "All levels",
@@ -27,6 +29,7 @@ export default function AdminQuizzes() {
   const [questions, setQuestions] = useState([newQuestion()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const line = { borderColor: "var(--ln)" };
 
   async function load() {
     const supabase = createClient();
@@ -148,169 +151,197 @@ export default function AdminQuizzes() {
     await load();
   }
 
-  if (!quizzes) return <p className="mu font-bold">...</p>;
+  if (!quizzes) return <p className="mu font-semibold">...</p>;
+
+  const toGrade = Object.values(waiting).reduce((a, b) => a + b, 0);
+  const publishedCount = quizzes.filter((q) => q.published).length;
 
   return (
-    <div className="up">
-      <h1 className="fluid-h2 font-extrabold">Quizzes</h1>
+    <div className="up space-y-6">
+      <PageHead
+        title="Quizzes"
+        sub="Create quizzes and grade your students' answers"
+      />
 
-      <form onSubmit={handleSubmit} className="cd mt-6 space-y-4 p-5 sm:p-6">
-        <h2 className="pr text-lg font-extrabold">New quiz</h2>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat value={quizzes.length} label="Quizzes" />
+        <Stat value={publishedCount} label="Published" tone="ok" />
+        <Stat
+          value={toGrade}
+          label="Answers to grade"
+          tone={toGrade > 0 ? "warn" : ""}
+        />
+      </div>
 
-        <div>
-          <label className="lbl">Quiz title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            className="field"
-          />
-        </div>
-
-        <div>
-          <label className="lbl">Level</label>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="field"
-          >
-            {LEVELS.map((lv) => (
-              <option key={lv}>{lv}</option>
-            ))}
-          </select>
-        </div>
-
-        {questions.map((q, i) => (
-          <div
-            key={i}
-            className="space-y-3 rounded-2xl border p-4"
-            style={{ borderColor: "var(--ln)" }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="pr font-extrabold">Question {i + 1}</p>
-              {questions.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setQuestions((qs) => qs.filter((_, idx) => idx !== i))
-                  }
-                  className="text-sm font-extrabold text-red-500 hover:underline"
-                >
-                  Remove
-                </button>
-              )}
+      <Panel title="New quiz" icon="plus">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="lbl">Quiz title</label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="field"
+              />
             </div>
-
-            <select
-              value={q.type}
-              onChange={(e) => setQ(i, "type", e.target.value)}
-              className="field"
-            >
-              <option value="multiple_choice">Multiple choice</option>
-              <option value="true_false">True / False</option>
-              <option value="fill_blank">Fill in the blank</option>
-            </select>
-
-            <textarea
-              value={q.prompt}
-              onChange={(e) => setQ(i, "prompt", e.target.value)}
-              rows={2}
-              placeholder={
-                q.type === "fill_blank"
-                  ? "Example: She ____ to school every day."
-                  : "Type the question here"
-              }
-              className="field"
-            />
-
-            {q.type === "multiple_choice" && (
-              <div className="space-y-2">
-                {q.options.map((o, j) => (
-                  <input
-                    key={j}
-                    value={o}
-                    onChange={(e) => setOpt(i, j, e.target.value)}
-                    placeholder={`Choice ${j + 1}`}
-                    className="field"
-                  />
+            <div>
+              <label className="lbl">Level</label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="field"
+              >
+                {LEVELS.map((lv) => (
+                  <option key={lv}>{lv}</option>
                 ))}
-              </div>
-            )}
-            {q.type === "true_false" && (
-              <p className="mu text-sm font-bold">
-                Students will choose True or False.
-              </p>
-            )}
-            {q.type === "fill_blank" && (
-              <p className="mu text-sm font-bold">
-                Students will type their own answer.
-              </p>
-            )}
+              </select>
+            </div>
           </div>
-        ))}
 
-        <button
-          type="button"
-          onClick={() => setQuestions((qs) => [...qs, newQuestion()])}
-          className="btn-ghost"
-        >
-          + Add question
-        </button>
-
-        <label className="flex items-center gap-2 font-bold">
-          <input
-            type="checkbox"
-            checked={published}
-            onChange={(e) => setPublished(e.target.checked)}
-          />
-          Publish (students can see it)
-        </label>
-
-        {error && <p className="err">{error}</p>}
-
-        <button type="submit" disabled={saving} className="btn">
-          {saving ? "Saving..." : "Save quiz"}
-        </button>
-      </form>
-
-      <h2 className="pr mt-10 text-lg font-extrabold">
-        All quizzes ({quizzes.length})
-      </h2>
-      <div className="mt-3 space-y-3">
-        {quizzes.length === 0 && (
-          <p className="mu font-semibold">No quizzes yet.</p>
-        )}
-        {quizzes.map((qz) => (
-          <div
-            key={qz.id}
-            className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-lg font-extrabold">{qz.title}</p>
-              <p className="mu text-sm font-bold">{qz.level}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className={`chip ${qz.published ? "chip-g" : "chip-n"}`}>
-                  {qz.published ? "published" : "draft"}
-                </span>
-                {waiting[qz.id] > 0 && (
-                  <span className="chip chip-y">{waiting[qz.id]} to grade</span>
+          {questions.map((q, i) => (
+            <div
+              key={i}
+              className="space-y-3 rounded-md border p-4"
+              style={line}
+            >
+              <div className="flex items-center justify-between">
+                <p className="font-semibold">Question {i + 1}</p>
+                {questions.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuestions((qs) => qs.filter((_, idx) => idx !== i))
+                    }
+                    className="text-sm font-semibold text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
                 )}
               </div>
+
+              <select
+                value={q.type}
+                onChange={(e) => setQ(i, "type", e.target.value)}
+                className="field"
+              >
+                <option value="multiple_choice">Multiple choice</option>
+                <option value="true_false">True / False</option>
+                <option value="fill_blank">Fill in the blank</option>
+              </select>
+
+              <textarea
+                value={q.prompt}
+                onChange={(e) => setQ(i, "prompt", e.target.value)}
+                rows={2}
+                placeholder={
+                  q.type === "fill_blank"
+                    ? "Example: She ____ to school every day."
+                    : "Type the question here"
+                }
+                className="field"
+              />
+
+              {q.type === "multiple_choice" && (
+                <div className="space-y-2">
+                  {q.options.map((o, j) => (
+                    <input
+                      key={j}
+                      value={o}
+                      onChange={(e) => setOpt(i, j, e.target.value)}
+                      placeholder={`Choice ${j + 1}`}
+                      className="field"
+                    />
+                  ))}
+                </div>
+              )}
+              {q.type === "true_false" && (
+                <p className="mu text-sm">
+                  Students will choose True or False.
+                </p>
+              )}
+              {q.type === "fill_blank" && (
+                <p className="mu text-sm">
+                  Students will type their own answer.
+                </p>
+              )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/admin/quizzes/${qz.id}`} className="btn sm">
-                Answers
-              </Link>
-              <button onClick={() => toggle(qz)} className="btn-ghost">
-                {qz.published ? "Unpublish" : "Publish"}
-              </button>
-              <button onClick={() => remove(qz.id)} className="btn btn-red sm">
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setQuestions((qs) => [...qs, newQuestion()])}
+            className="btn-ghost"
+          >
+            <Icon name="plus" size={14} />
+            Add question
+          </button>
+
+          <label className="flex items-center gap-3 font-medium">
+            <input
+              type="checkbox"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+            />
+            Publish (students can see it)
+          </label>
+
+          {error && <p className="err">{error}</p>}
+
+          <button type="submit" disabled={saving} className="btn">
+            {saving ? "Saving..." : "Save quiz"}
+          </button>
+        </form>
+      </Panel>
+
+      <section className="cd overflow-hidden">
+        {quizzes.length === 0 ? (
+          <Empty icon="clipboard">
+            No quizzes yet. Create your first quiz above.
+          </Empty>
+        ) : (
+          <ul className="divide-y" style={line}>
+            {quizzes.map((qz) => (
+              <li
+                key={qz.id}
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                style={line}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold">{qz.title}</p>
+                  <p className="mu text-sm">{qz.level}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span
+                      className={`chip ${qz.published ? "chip-g" : "chip-n"}`}
+                    >
+                      {qz.published ? "published" : "draft"}
+                    </span>
+                    {waiting[qz.id] > 0 && (
+                      <span className="chip chip-y">
+                        {waiting[qz.id]} to grade
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/admin/quizzes/${qz.id}`} className="btn sm">
+                    Answers
+                  </Link>
+                  <button onClick={() => toggle(qz)} className="btn-ghost">
+                    {qz.published ? "Unpublish" : "Publish"}
+                  </button>
+                  <button
+                    onClick={() => remove(qz.id)}
+                    className="btn btn-red sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

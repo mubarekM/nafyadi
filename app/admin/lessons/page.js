@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Panel, Empty } from "@/components/ui";
 
 const LEVELS = [
   "All levels",
@@ -33,6 +35,7 @@ export default function AdminLessons() {
   const [fileKey, setFileKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const line = { borderColor: "var(--ln)" };
 
   async function load() {
     const supabase = createClient();
@@ -167,7 +170,7 @@ export default function AdminLessons() {
     await load();
   }
 
-  if (!lessons) return <p className="mu font-bold">...</p>;
+  if (!lessons) return <p className="mu font-semibold">...</p>;
 
   // Group lessons by week for the list below
   const weeks = [];
@@ -182,167 +185,189 @@ export default function AdminLessons() {
     byWeek[w].items.push(l);
   });
   weeks.sort((a, b) => a.week - b.week);
+  const published = lessons.filter((l) => l.published).length;
 
   return (
-    <div className="up">
-      <h1 className="fluid-h2 font-extrabold">Lessons</h1>
+    <div className="up space-y-6">
+      <PageHead
+        title="Lessons"
+        sub="Weeks, videos, notes, checklists and private files"
+      />
 
-      <form onSubmit={handleSubmit} className="cd mt-6 space-y-4 p-5 sm:p-6">
-        <h2 className="pr text-lg font-extrabold">
-          {editingId ? "Edit lesson" : "New lesson"}
-        </h2>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat value={lessons.length} label="Lessons" />
+        <Stat value={published} label="Published" tone="ok" />
+        <Stat
+          value={lessons.length - published}
+          label="Drafts"
+          tone={lessons.length - published > 0 ? "warn" : ""}
+        />
+        <Stat value={weeks.length} label="Weeks" />
+      </div>
 
-        <div>
-          <label className="lbl">Title</label>
-          <input
-            value={form.title}
-            onChange={(e) => update("title", e.target.value)}
-            required
-            className="field"
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-3">
+      <Panel
+        title={editingId ? "Edit lesson" : "New lesson"}
+        icon={editingId ? "edit" : "plus"}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="lbl">Level</label>
-            <select
-              value={form.level}
-              onChange={(e) => update("level", e.target.value)}
-              className="field"
-            >
-              {LEVELS.map((lv) => (
-                <option key={lv}>{lv}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="lbl">Week number</label>
+            <label className="lbl">Title</label>
             <input
-              type="number"
-              min="1"
-              value={form.week}
-              onChange={(e) => update("week", e.target.value)}
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
               required
               className="field"
             />
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="lbl">Level</label>
+              <select
+                value={form.level}
+                onChange={(e) => update("level", e.target.value)}
+                className="field"
+              >
+                {LEVELS.map((lv) => (
+                  <option key={lv}>{lv}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">Week number</label>
+              <input
+                type="number"
+                min="1"
+                value={form.week}
+                onChange={(e) => update("week", e.target.value)}
+                required
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="lbl">Week title (optional)</label>
+              <input
+                value={form.week_title}
+                onChange={(e) => update("week_title", e.target.value)}
+                placeholder="Example: Greetings and introductions"
+                className="field"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="lbl">Week title (optional)</label>
-            <input
-              value={form.week_title}
-              onChange={(e) => update("week_title", e.target.value)}
-              placeholder="Example: Greetings and introductions"
+            <label className="lbl">Lesson notes</label>
+            <textarea
+              value={form.content}
+              onChange={(e) => update("content", e.target.value)}
+              rows={7}
               className="field"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="lbl">Lesson notes</label>
-          <textarea
-            value={form.content}
-            onChange={(e) => update("content", e.target.value)}
-            rows={7}
-            className="field"
-          />
-        </div>
+          <div>
+            <label className="lbl">Video link (YouTube, optional)</label>
+            <input
+              value={form.video_url}
+              onChange={(e) => update("video_url", e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="field"
+            />
+          </div>
 
-        <div>
-          <label className="lbl">Video link (YouTube, optional)</label>
-          <input
-            value={form.video_url}
-            onChange={(e) => update("video_url", e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=..."
-            className="field"
-          />
-        </div>
+          <div>
+            <label className="lbl">
+              Checklist for students (one item per line, optional)
+            </label>
+            <textarea
+              value={form.checklist}
+              onChange={(e) => update("checklist", e.target.value)}
+              rows={4}
+              placeholder={
+                "Watch the video\nRead the notes\nPractice 10 sentences"
+              }
+              className="field"
+            />
+          </div>
 
-        <div>
-          <label className="lbl">
-            Checklist for students (one item per line, optional)
+          <div>
+            <label className="lbl">
+              File: PDF or audio (optional, max 50 MB). Stored privately.
+            </label>
+            {form.file_name && !file && (
+              <p className="pr mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Icon name="paperclip" size={14} />
+                Current file: {form.file_name}
+              </p>
+            )}
+            <input
+              key={fileKey}
+              type="file"
+              accept=".pdf,audio/*"
+              onChange={(e) => setFile(e.target.files[0] || null)}
+              className="mu block w-full text-sm"
+            />
+          </div>
+
+          <label className="flex items-center gap-3 font-medium">
+            <input
+              type="checkbox"
+              checked={form.published}
+              onChange={(e) => update("published", e.target.checked)}
+            />
+            Publish (students can see it)
           </label>
-          <textarea
-            value={form.checklist}
-            onChange={(e) => update("checklist", e.target.value)}
-            rows={4}
-            placeholder={
-              "Watch the video\nRead the notes\nPractice 10 sentences"
-            }
-            className="field"
-          />
-        </div>
 
-        <div>
-          <label className="lbl">
-            File: PDF or audio (optional, max 50 MB). Stored privately.
-          </label>
-          {form.file_name && !file && (
-            <p className="pr mb-2 text-sm font-bold">
-              Current file: {form.file_name}
-            </p>
-          )}
-          <input
-            key={fileKey}
-            type="file"
-            accept=".pdf,audio/*"
-            onChange={(e) => setFile(e.target.files[0] || null)}
-            className="mu block w-full text-sm font-bold file:mr-4 file:rounded-full file:border-0 file:bg-[var(--acc)] file:px-4 file:py-2 file:font-extrabold file:text-white"
-          />
-        </div>
+          {error && <p className="err">{error}</p>}
 
-        <label className="flex items-center gap-2 font-bold">
-          <input
-            type="checkbox"
-            checked={form.published}
-            onChange={(e) => update("published", e.target.checked)}
-          />
-          Publish (students can see it)
-        </label>
-
-        {error && <p className="err">{error}</p>}
-
-        <div className="flex gap-3">
-          <button type="submit" disabled={saving} className="btn">
-            {saving ? "Saving..." : editingId ? "Save changes" : "Add lesson"}
-          </button>
-          {editingId && (
-            <button type="button" onClick={resetForm} className="btn-ghost">
-              Cancel
+          <div className="flex gap-3">
+            <button type="submit" disabled={saving} className="btn">
+              {saving ? "Saving..." : editingId ? "Save changes" : "Add lesson"}
             </button>
-          )}
-        </div>
-      </form>
+            {editingId && (
+              <button type="button" onClick={resetForm} className="btn-ghost">
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </Panel>
 
-      <h2 className="pr mt-10 text-lg font-extrabold">
-        All lessons ({lessons.length})
-      </h2>
       {lessons.length === 0 && (
-        <p className="mu mt-3 font-semibold">No lessons yet.</p>
+        <div className="cd">
+          <Empty icon="book">
+            No lessons yet. Add your first lesson above.
+          </Empty>
+        </div>
       )}
 
       {weeks.map((w) => (
-        <div key={w.week} className="mt-6">
-          <p className="mb-3 font-extrabold">
+        <section key={w.week} className="cd overflow-hidden">
+          <div className="week-h px-5 py-3.5 font-semibold">
             Week {w.week}
             {w.title ? `: ${w.title}` : ""}
-          </p>
-          <div className="space-y-3">
+          </div>
+          <ul className="divide-y" style={line}>
             {w.items.map((l) => (
-              <div
+              <li
                 key={l.id}
-                className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                style={line}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-lg font-extrabold">{l.title}</p>
-                  <p className="mu text-sm font-bold">{l.level}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <p className="truncate text-lg font-semibold">{l.title}</p>
+                  <p className="mu text-sm">{l.level}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     <span
                       className={`chip ${l.published ? "chip-g" : "chip-n"}`}
                     >
                       {l.published ? "published" : "draft"}
                     </span>
                     {l.file_name && (
-                      <span className="chip chip-n">🔒 {l.file_name}</span>
+                      <span className="chip chip-n inline-flex items-center gap-1">
+                        <Icon name="lock" size={11} />
+                        {l.file_name}
+                      </span>
                     )}
                     {(l.checklist || []).length > 0 && (
                       <span className="chip chip-n">
@@ -362,10 +387,10 @@ export default function AdminLessons() {
                     Delete
                   </button>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       ))}
     </div>
   );

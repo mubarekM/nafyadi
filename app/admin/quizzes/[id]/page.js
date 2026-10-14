@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Empty, Avatar } from "@/components/ui";
 
 function QuizAnswers() {
   const params = useParams();
@@ -13,6 +15,7 @@ function QuizAnswers() {
   const [edits, setEdits] = useState({});
   const [savingId, setSavingId] = useState(null);
   const [message, setMessage] = useState("");
+  const line = { borderColor: "var(--ln)" };
 
   async function load() {
     const supabase = createClient();
@@ -83,39 +86,56 @@ function QuizAnswers() {
     setSavingId(null);
   }
 
-  if (!data) return <p className="mu font-bold">...</p>;
+  if (!data) return <p className="mu font-semibold">...</p>;
 
   const { quiz, questions, subs, names } = data;
+  const toGrade = subs.filter((s) => s.status !== "graded").length;
 
   return (
-    <div className="up">
-      <Link
-        href="/admin/quizzes"
-        className="pr text-sm font-extrabold hover:underline"
-      >
-        ← Quizzes
-      </Link>
-      <h1 className="fluid-h2 mt-3 font-extrabold">Answers: {quiz?.title}</h1>
+    <div className="up space-y-6">
+      <div>
+        <Link href="/admin/quizzes" className="btn-ghost">
+          <Icon name="chevronRight" size={16} className="rotate-180" />
+          Quizzes
+        </Link>
+      </div>
+      <PageHead
+        title={`Answers: ${quiz?.title || ""}`}
+        sub="Read each student's answers and give a score and feedback"
+      />
 
-      {message && <p className="err mt-4">{message}</p>}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat value={subs.length} label="Submissions" />
+        <Stat
+          value={toGrade}
+          label="To grade"
+          tone={toGrade > 0 ? "warn" : ""}
+        />
+        <Stat value={subs.length - toGrade} label="Graded" tone="ok" />
+      </div>
 
-      <div className="mt-6 space-y-5">
+      {message && <p className="err">{message}</p>}
+
+      <div className="space-y-4">
         {subs.length === 0 && (
-          <p className="mu font-semibold">No student has sent answers yet.</p>
+          <div className="cd">
+            <Empty icon="clipboard">No student has sent answers yet.</Empty>
+          </div>
         )}
 
         {subs.map((s) => {
           const student = names[s.student_id];
           return (
-            <div key={s.id} className="cd p-4 sm:p-5">
+            <article key={s.id} className="cd p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-extrabold">
-                    {student?.full_name || "Student"}
-                  </p>
-                  <p className="mu text-sm font-bold">
-                    {student?.english_level}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar name={student?.full_name} />
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold">
+                      {student?.full_name || "Student"}
+                    </p>
+                    <p className="mu text-sm">{student?.english_level}</p>
+                  </div>
                 </div>
                 <span
                   className={`chip ${s.status === "graded" ? "chip-g" : "chip-y"}`}
@@ -128,13 +148,13 @@ function QuizAnswers() {
                 {questions.map((q, i) => (
                   <div
                     key={q.id}
-                    className="rounded-xl border p-3"
-                    style={{ borderColor: "var(--ln)" }}
+                    className="rounded-md border p-3"
+                    style={line}
                   >
-                    <p className="mu text-sm font-bold">
+                    <p className="mu text-sm">
                       {i + 1}. {q.prompt}
                     </p>
-                    <p className="pr mt-1 font-extrabold">
+                    <p className="pr mt-1 font-semibold">
                       {s.answers?.[q.id] || "(no answer)"}
                     </p>
                   </div>
@@ -173,7 +193,7 @@ function QuizAnswers() {
                     ? "Update grade"
                     : "Save grade"}
               </button>
-            </div>
+            </article>
           );
         })}
       </div>
@@ -183,7 +203,7 @@ function QuizAnswers() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<p className="mu font-bold">...</p>}>
+    <Suspense fallback={<p className="mu font-semibold">...</p>}>
       <QuizAnswers />
     </Suspense>
   );

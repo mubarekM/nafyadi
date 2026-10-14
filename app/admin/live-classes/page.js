@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Panel, Empty } from "@/components/ui";
 
 const LEVELS = [
   "All levels",
@@ -31,6 +33,7 @@ export default function AdminLiveClasses() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const line = { borderColor: "var(--ln)" };
 
   async function load() {
     const supabase = createClient();
@@ -82,7 +85,7 @@ export default function AdminLiveClasses() {
     await load();
   }
 
-  if (!classes) return <p className="mu font-bold">...</p>;
+  if (!classes) return <p className="mu font-semibold">...</p>;
 
   const cutoff = Date.now() - 2 * 60 * 60 * 1000;
   const upcoming = classes
@@ -92,118 +95,136 @@ export default function AdminLiveClasses() {
 
   function row(c) {
     return (
-      <div
+      <li
         key={c.id}
-        className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+        className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+        style={line}
       >
         <div className="min-w-0">
-          <p className="truncate text-lg font-extrabold">{c.title}</p>
-          <p className="mu text-sm font-bold">
+          <p className="truncate text-lg font-semibold">{c.title}</p>
+          <p className="mu flex items-center gap-2 text-sm">
+            <Icon name="clock" size={14} />
             {fmt(c.starts_at)} · {c.level}
           </p>
           <a
             href={c.meeting_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="pr mt-1 inline-block text-sm font-extrabold hover:underline"
+            className="pr mt-1 inline-flex items-center gap-1 text-sm font-semibold hover:underline"
           >
             Open meeting link
+            <Icon name="arrowUpRight" size={13} />
           </a>
         </div>
         <button onClick={() => remove(c.id)} className="btn btn-red sm">
           Delete
         </button>
-      </div>
+      </li>
     );
   }
 
   return (
-    <div className="up">
-      <h1 className="fluid-h2 font-extrabold">Live Classes</h1>
+    <div className="up space-y-6">
+      <PageHead
+        title="Live classes"
+        sub="Schedule classes and share the meeting link"
+      />
 
-      <form onSubmit={handleSubmit} className="cd mt-6 space-y-4 p-5 sm:p-6">
-        <h2 className="pr text-lg font-extrabold">Schedule a class</h2>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          value={upcoming.length}
+          label="Upcoming"
+          tone={upcoming.length > 0 ? "ok" : "warn"}
+        />
+        <Stat value={past.length} label="Past" />
+        <Stat value={classes.length} label="Total" />
+      </div>
 
-        <div>
-          <label className="lbl">Title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            className="field"
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
+      <Panel title="Schedule a class" icon="calendar">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="lbl">Level</label>
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="field"
-            >
-              {LEVELS.map((lv) => (
-                <option key={lv}>{lv}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="lbl">Date and time</label>
+            <label className="lbl">Title</label>
             <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               required
               className="field"
             />
           </div>
-        </div>
 
-        <div>
-          <label className="lbl">Meeting link (Google Meet, Zoom...)</label>
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-            placeholder="https://meet.google.com/..."
-            className="field"
-          />
-        </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="lbl">Level</label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="field"
+              >
+                {LEVELS.map((lv) => (
+                  <option key={lv}>{lv}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">Date and time</label>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                required
+                className="field"
+              />
+            </div>
+          </div>
 
-        <div>
-          <label className="lbl">Note for students (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="field"
-          />
-        </div>
+          <div>
+            <label className="lbl">Meeting link (Google Meet, Zoom...)</label>
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+              placeholder="https://meet.google.com/..."
+              className="field"
+            />
+          </div>
 
-        {error && <p className="err">{error}</p>}
+          <div>
+            <label className="lbl">Note for students (optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="field"
+            />
+          </div>
 
-        <button type="submit" disabled={saving} className="btn">
-          {saving ? "Saving..." : "Add class"}
-        </button>
-      </form>
+          {error && <p className="err">{error}</p>}
 
-      <h2 className="pr mt-10 text-lg font-extrabold">
-        Upcoming ({upcoming.length})
-      </h2>
-      <div className="mt-3 space-y-3">
-        {upcoming.length === 0 && (
-          <p className="mu font-semibold">No upcoming classes.</p>
+          <button type="submit" disabled={saving} className="btn">
+            {saving ? "Saving..." : "Add class"}
+          </button>
+        </form>
+      </Panel>
+
+      <Panel title={`Upcoming (${upcoming.length})`} icon="video" flush>
+        {upcoming.length === 0 ? (
+          <Empty icon="calendar">No upcoming classes.</Empty>
+        ) : (
+          <ul className="divide-y" style={line}>
+            {upcoming.map(row)}
+          </ul>
         )}
-        {upcoming.map(row)}
-      </div>
+      </Panel>
 
-      <h2 className="pr mt-10 text-lg font-extrabold">Past ({past.length})</h2>
-      <div className="mt-3 space-y-3">
-        {past.length === 0 && (
-          <p className="mu font-semibold">No past classes.</p>
+      <Panel title={`Past (${past.length})`} icon="clock" flush>
+        {past.length === 0 ? (
+          <Empty icon="clock">No past classes.</Empty>
+        ) : (
+          <ul className="divide-y" style={line}>
+            {past.map(row)}
+          </ul>
         )}
-        {past.map(row)}
-      </div>
+      </Panel>
     </div>
   );
 }

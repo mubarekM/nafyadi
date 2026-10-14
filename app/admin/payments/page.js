@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Empty, Seg } from "@/components/ui";
 
 const PLAN_NAME = {
   kids: "Kids group class",
@@ -10,8 +12,8 @@ const PLAN_NAME = {
 };
 const CHIP = { pending: "chip-y", approved: "chip-g", rejected: "chip-r" };
 const AUTO = {
-  verified: ["chip-g", "⚡ auto-verified"],
-  mismatch: ["chip-r", "⚠ receipt does not match"],
+  verified: ["chip-g", "auto-verified"],
+  mismatch: ["chip-r", "receipt does not match"],
   not_found: ["chip-y", "receipt not found"],
   unavailable: ["chip-n", "not checked"],
 };
@@ -120,7 +122,7 @@ export default function AdminPayments() {
     setBusyId(null);
   }
 
-  if (!pays) return <p className="mu font-bold">...</p>;
+  if (!pays) return <p className="mu font-semibold">...</p>;
 
   const today = new Date();
   const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
@@ -140,48 +142,46 @@ export default function AdminPayments() {
   };
   const shown = tab === "all" ? pays : pays.filter((p) => p.status === tab);
 
-  const cards = [
-    ["⏳", "Waiting for you", counts.pending],
-    ["✅", "Paid this month", approvedNow.length],
-    ["⚡", "Auto-confirmed", autoNow],
-    ["💰", "ETB this month", etb(total)],
-  ];
-
   return (
-    <div className="up">
-      <h1 className="fluid-h2 font-extrabold">Payments</h1>
+    <div className="up space-y-6">
+      <PageHead
+        title="Payments"
+        sub="Review payment screenshots and confirm or reject them"
+      />
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {cards.map(([icon, label, n]) => (
-          <div key={label} className="cd p-3 sm:p-5">
-            <p className="text-2xl">{icon}</p>
-            <p className="pr mt-2 break-all text-xl font-extrabold sm:text-3xl">
-              {n}
-            </p>
-            <p className="mu text-xs font-bold sm:text-sm">{label}</p>
-          </div>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          value={counts.pending}
+          label="Waiting for you"
+          tone={counts.pending > 0 ? "warn" : ""}
+        />
+        <Stat value={approvedNow.length} label="Paid this month" tone="ok" />
+        <Stat value={autoNow} label="Auto-confirmed" />
+        <Stat
+          value={`${etb(total)} ETB`}
+          label="Received this month"
+          tone="ok"
+        />
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {["pending", "approved", "rejected", "all"].map((k) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`rounded-full px-4 py-2 text-sm font-extrabold capitalize ${
-              tab === k ? "grad text-white" : "btn-ghost"
-            }`}
-          >
-            {k} ({counts[k]})
-          </button>
-        ))}
-      </div>
+      <Seg
+        value={tab}
+        onChange={setTab}
+        options={[
+          ["pending", `Pending (${counts.pending})`],
+          ["approved", `Approved (${counts.approved})`],
+          ["rejected", `Rejected (${counts.rejected})`],
+          ["all", `All (${counts.all})`],
+        ]}
+      />
 
-      {msg && <p className="err mt-4">{msg}</p>}
+      {msg && <p className="err">{msg}</p>}
 
-      <div className="mt-5 space-y-4">
+      <div className="space-y-4">
         {shown.length === 0 && (
-          <p className="mu font-semibold">Nothing here.</p>
+          <div className="cd">
+            <Empty icon="card">Nothing here.</Empty>
+          </div>
         )}
 
         {shown.map((p) => {
@@ -189,7 +189,7 @@ export default function AdminPayments() {
           const url = urls[p.proof_path];
           const auto = p.auto_status ? AUTO[p.auto_status] : null;
           return (
-            <div
+            <article
               key={p.id}
               className="cd flex flex-col gap-4 p-4 sm:flex-row sm:p-5"
             >
@@ -200,28 +200,26 @@ export default function AdminPayments() {
                     <img
                       src={url}
                       alt="Payment screenshot"
-                      className="h-44 w-full rounded-xl border object-cover object-top sm:h-40"
+                      className="h-44 w-full rounded-md border object-cover object-top sm:h-40"
                       style={{ borderColor: "var(--ln)" }}
                     />
                   </a>
                 ) : (
-                  <div className="pill mu flex h-24 items-center justify-center text-xs font-bold">
+                  <div className="pill mu flex h-24 items-center justify-center text-xs">
                     No image
                   </div>
                 )}
                 {url && (
-                  <p className="mu mt-1 text-center text-xs font-bold">
-                    Tap to enlarge
-                  </p>
+                  <p className="mu mt-1 text-center text-xs">Tap to enlarge</p>
                 )}
               </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="truncate text-lg font-extrabold">
+                  <p className="truncate text-lg font-semibold">
                     {who?.full_name || "Student"}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {auto && (
                       <span className={`chip ${auto[0]}`}>{auto[1]}</span>
                     )}
@@ -231,31 +229,29 @@ export default function AdminPayments() {
                 {who?.phone && (
                   <a
                     href={`tel:${who.phone}`}
-                    className="pr text-sm font-extrabold hover:underline"
+                    className="pr text-sm font-semibold hover:underline"
                   >
                     {who.phone}
                   </a>
                 )}
-                <p className="pr mt-2 text-xl font-extrabold">
-                  {etb(p.amount)} ETB
-                </p>
-                <p className="mu text-sm font-bold">
+                <p className="display mt-2 text-3xl">{etb(p.amount)} ETB</p>
+                <p className="mu text-sm">
                   {PLAN_NAME[p.plan] || p.plan} · for {monthName(p.month)}
                 </p>
-                <p className="mu break-all text-sm font-bold">
+                <p className="mu break-all text-sm">
                   {p.bank || "Bank not given"}
                   {p.reference ? ` · Ref: ${p.reference}` : ""}
                 </p>
-                <p className="mu text-xs font-bold">
-                  Sent {when(p.created_at)}
-                </p>
+                <p className="mu text-xs">Sent {when(p.created_at)}</p>
 
                 {p.auto_note && (
-                  <p
-                    className="mt-2 rounded-lg px-3 py-2 text-sm font-bold"
-                    style={{ background: "var(--soft)" }}
-                  >
-                    🤖 {p.auto_note}
+                  <p className="callout mt-3 flex items-start gap-2 p-3 text-sm">
+                    <Icon
+                      name="info"
+                      size={16}
+                      className="mt-0.5 shrink-0 text-[var(--pri)]"
+                    />
+                    <span>{p.auto_note}</span>
                   </p>
                 )}
 
@@ -295,7 +291,7 @@ export default function AdminPayments() {
                     >
                       {busyId === p.id
                         ? "Checking..."
-                        : "🤖 Re-check automatically"}
+                        : "Re-check automatically"}
                     </button>
                   )}
                   {p.status !== "pending" && (
@@ -309,7 +305,7 @@ export default function AdminPayments() {
                   )}
                 </div>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>

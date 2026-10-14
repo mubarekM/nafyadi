@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Panel, Empty } from "@/components/ui";
 
 const day = (iso) =>
   new Date(iso).toLocaleDateString("en-US", {
@@ -17,6 +19,7 @@ export default function AdminCertificates() {
   const [title, setTitle] = useState("English Speaking Course");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const line = { borderColor: "var(--ln)" };
 
   async function load() {
     const supabase = createClient();
@@ -68,7 +71,7 @@ export default function AdminCertificates() {
     await load();
   }
 
-  if (!students) return <p className="mu font-bold">...</p>;
+  if (!students) return <p className="mu font-semibold">...</p>;
 
   const names = {};
   students.forEach((s) => {
@@ -77,83 +80,97 @@ export default function AdminCertificates() {
   const approved = students.filter((s) => s.status === "approved");
 
   return (
-    <div className="up">
-      <h1 className="fluid-h2 font-extrabold">Certificates</h1>
+    <div className="up space-y-6">
+      <PageHead
+        title="Certificates"
+        sub="Issue a printable certificate when a student finishes"
+      />
 
-      <form onSubmit={issue} className="cd mt-6 space-y-4 p-5 sm:p-6">
-        <h2 className="pr text-lg font-extrabold">Issue a certificate</h2>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat value={certs.length} label="Issued" tone="ok" />
+        <Stat value={approved.length} label="Approved students" />
+      </div>
 
-        <div>
-          <label className="lbl">Student</label>
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            className="field"
-          >
-            <option value="">Choose a student...</option>
-            {approved.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.full_name} ({s.english_level})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="lbl">Course name on the certificate</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            maxLength={120}
-            className="field"
-          />
-        </div>
-
-        {error && <p className="err">{error}</p>}
-
-        <button type="submit" disabled={saving} className="btn">
-          {saving ? "Saving..." : "Issue certificate"}
-        </button>
-      </form>
-
-      <h2 className="pr mt-10 text-lg font-extrabold">
-        Issued ({certs.length})
-      </h2>
-      <div className="mt-3 space-y-3">
-        {certs.length === 0 && (
-          <p className="mu font-semibold">No certificates issued yet.</p>
-        )}
-        {certs.map((c) => (
-          <div
-            key={c.id}
-            className="cd flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-lg font-extrabold">
-                {names[c.student_id] || "Student"}
-              </p>
-              <p className="mu text-sm font-bold">
-                {c.title} · {day(c.issued_at)}
-              </p>
-              <span className="chip chip-n mt-2">ID {c.code}</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={`/certificate/${c.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn sm"
+      <Panel title="Issue a certificate" icon="award">
+        <form onSubmit={issue} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="lbl">Student</label>
+              <select
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                className="field"
               >
-                View / Print
-              </a>
-              <button onClick={() => revoke(c.id)} className="btn btn-red sm">
-                Delete
-              </button>
+                <option value="">Choose a student...</option>
+                {approved.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name} ({s.english_level})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">Course name on the certificate</label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                maxLength={120}
+                className="field"
+              />
             </div>
           </div>
-        ))}
-      </div>
+
+          {error && <p className="err">{error}</p>}
+
+          <button type="submit" disabled={saving} className="btn">
+            {saving ? "Saving..." : "Issue certificate"}
+          </button>
+        </form>
+      </Panel>
+
+      <Panel title={`Issued (${certs.length})`} icon="checkCircle" flush>
+        {certs.length === 0 ? (
+          <Empty icon="award">No certificates issued yet.</Empty>
+        ) : (
+          <ul className="divide-y" style={line}>
+            {certs.map((c) => (
+              <li
+                key={c.id}
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                style={line}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold">
+                    {names[c.student_id] || "Student"}
+                  </p>
+                  <p className="mu text-sm">
+                    {c.title} · {day(c.issued_at)}
+                  </p>
+                  <span className="chip chip-n mt-1.5">ID {c.code}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`/certificate/${c.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn sm"
+                  >
+                    View / Print
+                    <Icon name="arrowUpRight" size={14} />
+                  </a>
+                  <button
+                    onClick={() => revoke(c.id)}
+                    className="btn btn-red sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
     </div>
   );
 }

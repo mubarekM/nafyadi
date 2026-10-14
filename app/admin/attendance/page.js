@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import { PageHead, Stat, Empty, Seg, Avatar } from "@/components/ui";
 
 const OPTIONS = [
   ["present", "Present", "chip-g"],
@@ -57,13 +58,14 @@ export default function AdminAttendance() {
     load();
   }, []);
 
-  if (!data) return <p className="mu font-bold">...</p>;
+  if (!data) return <p className="mu font-semibold">...</p>;
 
   const { classes, students, rows } = data;
   const rowOf = (cid, sid) =>
     rows.find((r) => r.class_id === cid && r.student_id === sid);
   const levelOk = (cls, s) =>
     cls.level === "All levels" || s.english_level === cls.level;
+  const line = { borderColor: "var(--ln)" };
 
   function setRows(next) {
     setData((d) => ({ ...d, rows: next }));
@@ -158,29 +160,44 @@ export default function AdminAttendance() {
     })
     .filter((x) => !group || String(x.s.study_group) === group);
 
-  return (
-    <div className="up">
-      <h1 className="fluid-h2 font-extrabold">Attendance</h1>
-      <p className="mu mt-1 font-semibold">
-        Students who tap Join during class time are marked automatically. You
-        can correct anyone.
-      </p>
+  const rated = summary.filter((x) => x.pct !== null);
+  const avg = rated.length
+    ? Math.round(rated.reduce((a, x) => a + x.pct, 0) / rated.length)
+    : null;
+  const here = cls
+    ? list.filter((s) => ATTENDED.includes(rowOf(classId, s.id)?.status)).length
+    : 0;
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        {[
-          ["class", "By class"],
-          ["student", "By student"],
-        ].map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`rounded-full px-4 py-2 text-sm font-extrabold ${
-              tab === k ? "grad text-white" : "btn-ghost"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+  return (
+    <div className="up space-y-6">
+      <PageHead
+        title="Attendance"
+        sub="Students who tap Join during class time are marked automatically. You can correct anyone."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat value={students.length} label="Approved students" />
+        <Stat value={past.length} label="Classes held" />
+        <Stat
+          value={avg === null ? "–" : `${avg}%`}
+          label="Average attendance"
+          tone="ok"
+        />
+        <Stat
+          value={cls ? `${here} / ${list.length}` : "–"}
+          label="Here in selected class"
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Seg
+          value={tab}
+          onChange={setTab}
+          options={[
+            ["class", "By class"],
+            ["student", "By student"],
+          ]}
+        />
         <select
           value={group}
           onChange={(e) => setGroup(e.target.value)}
@@ -194,17 +211,19 @@ export default function AdminAttendance() {
         </select>
       </div>
 
-      {msg && <p className="err mt-4">{msg}</p>}
+      {msg && <p className="err">{msg}</p>}
 
       {tab === "class" && (
         <>
           {classes.length === 0 ? (
-            <p className="mu mt-6 font-semibold">
-              No live classes yet. Schedule one under Live Classes.
-            </p>
+            <div className="cd">
+              <Empty icon="calendar">
+                No live classes yet. Schedule one under Live Classes.
+              </Empty>
+            </div>
           ) : (
             <>
-              <div className="mt-5">
+              <div>
                 <label className="lbl">Live class</label>
                 <select
                   value={classId}
@@ -219,8 +238,8 @@ export default function AdminAttendance() {
                 </select>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="mu text-sm font-bold">{list.length} students</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="mu text-sm">{list.length} students</p>
                 <button
                   onClick={() => markAllPresent(list)}
                   className="btn-ghost"
@@ -229,25 +248,28 @@ export default function AdminAttendance() {
                 </button>
               </div>
 
-              <div className="mt-3 space-y-3">
+              <div className="space-y-3">
                 {list.length === 0 && (
-                  <p className="mu font-semibold">
-                    No students match this class.
-                  </p>
+                  <div className="cd">
+                    <Empty icon="users">No students match this class.</Empty>
+                  </div>
                 )}
                 {list.map((s) => {
                   const r = rowOf(classId, s.id);
                   return (
-                    <div key={s.id} className="cd p-4">
+                    <article key={s.id} className="cd p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-extrabold">
-                            {s.full_name}
-                          </p>
-                          <p className="mu text-xs font-bold">
-                            {s.english_level}
-                            {s.study_group ? ` · Group ${s.study_group}` : ""}
-                          </p>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Avatar name={s.full_name} size={36} />
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">
+                              {s.full_name}
+                            </p>
+                            <p className="mu text-xs">
+                              {s.english_level}
+                              {s.study_group ? ` · Group ${s.study_group}` : ""}
+                            </p>
+                          </div>
                         </div>
                         {r?.status === "joined" && (
                           <span className="chip chip-g">joined by link</span>
@@ -255,7 +277,7 @@ export default function AdminAttendance() {
                         {r && r.status !== "joined" && (
                           <button
                             onClick={() => clearMark(s.id)}
-                            className="mu text-xs font-extrabold hover:underline"
+                            className="mu text-xs font-semibold hover:underline"
                           >
                             Clear
                           </button>
@@ -266,9 +288,10 @@ export default function AdminAttendance() {
                           <button
                             key={key}
                             onClick={() => mark(s.id, key)}
+                            aria-pressed={r?.status === key}
                             className={
                               r?.status === key
-                                ? `chip ${chip} !px-4 !py-2 !text-sm ring-2 ring-offset-0`
+                                ? `chip ${chip} !px-4 !py-2 !text-sm ring-2 ring-[var(--pri)]`
                                 : "btn-ghost"
                             }
                           >
@@ -276,7 +299,7 @@ export default function AdminAttendance() {
                           </button>
                         ))}
                       </div>
-                    </div>
+                    </article>
                   );
                 })}
               </div>
@@ -286,19 +309,24 @@ export default function AdminAttendance() {
       )}
 
       {tab === "student" && (
-        <div className="mt-6 space-y-3">
+        <div className="space-y-3">
           {summary.length === 0 && (
-            <p className="mu font-semibold">No students yet.</p>
+            <div className="cd">
+              <Empty icon="users">No students yet.</Empty>
+            </div>
           )}
           {summary.map(({ s, total, attended, pct }) => (
-            <div key={s.id} className="cd p-4">
+            <article key={s.id} className="cd p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate font-extrabold">{s.full_name}</p>
-                  <p className="mu text-xs font-bold">
-                    {s.english_level}
-                    {s.study_group ? ` · Group ${s.study_group}` : ""}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar name={s.full_name} size={36} />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{s.full_name}</p>
+                    <p className="mu text-xs">
+                      {s.english_level}
+                      {s.study_group ? ` · Group ${s.study_group}` : ""}
+                    </p>
+                  </div>
                 </div>
                 {pct === null ? (
                   <span className="chip chip-n">no classes yet</span>
@@ -312,16 +340,16 @@ export default function AdminAttendance() {
               </div>
               {pct !== null && (
                 <div
-                  className="mt-3 h-2.5 w-full overflow-hidden rounded-full"
+                  className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
                   style={{ background: "var(--soft)" }}
                 >
                   <div
-                    className="grad h-full rounded-full"
-                    style={{ width: pct + "%" }}
+                    className="h-full rounded-full"
+                    style={{ width: pct + "%", background: "var(--pri)" }}
                   />
                 </div>
               )}
-            </div>
+            </article>
           ))}
         </div>
       )}

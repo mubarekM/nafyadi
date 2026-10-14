@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Empty, Avatar } from "@/components/ui";
 
 const BADGE = { pending: "chip-y", approved: "chip-g", rejected: "chip-r" };
 
@@ -37,6 +39,7 @@ export default function AdminDashboard() {
     year: "numeric",
     month: "long",
   });
+  const line = { borderColor: "var(--ln)" };
 
   async function load() {
     const supabase = createClient();
@@ -172,7 +175,7 @@ export default function AdminDashboard() {
     }
   }
 
-  if (!students) return <p className="mu font-bold">...</p>;
+  if (!students) return <p className="mu font-semibold">...</p>;
 
   const term = search.trim().toLowerCase();
   const shown = students.filter(
@@ -183,13 +186,7 @@ export default function AdminDashboard() {
   );
   const pending = shown.filter((s) => s.status === "pending");
   const others = shown.filter((s) => s.status !== "pending");
-
-  const cards = [
-    ["⏳", "Waiting", students.filter((s) => s.status === "pending").length],
-    ["✅", "Approved", students.filter((s) => s.status === "approved").length],
-    ["📚", "Lessons", stats.lessons],
-    ["📝", "To grade", stats.toGrade],
-  ];
+  const waitingCount = students.filter((s) => s.status === "pending").length;
 
   function studentCard(s) {
     const pay = payMap[s.id];
@@ -202,34 +199,40 @@ export default function AdminDashboard() {
     const msg = reminderText(s.full_name, monthLabel);
 
     return (
-      <div key={s.id} className="cd p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="truncate text-lg font-extrabold">{s.full_name}</p>
-            <p className="text-sm font-bold">
-              <a href={`tel:${s.phone}`} className="pr hover:underline">
-                {s.phone}
-              </a>
-              <span className="mu"> · {s.english_level}</span>
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className={`chip ${BADGE[s.status]}`}>{s.status}</span>
-              <span className="chip chip-n">
-                {opened[s.id] || 0} lessons opened
-              </span>
-              {s.study_group && (
-                <span className="chip chip-n">Group {s.study_group}</span>
-              )}
-              {s.status === "approved" &&
-                (s.free_access ? (
-                  <span className="chip chip-n">free access</span>
-                ) : pay === "paid" ? (
-                  <span className="chip chip-g">paid this month</span>
-                ) : pay === "review" ? (
-                  <span className="chip chip-y">payment under review</span>
-                ) : (
-                  <span className="chip chip-r">unpaid</span>
-                ))}
+      <article key={s.id} className="cd p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 gap-3">
+            <Avatar name={s.full_name} />
+            <div className="min-w-0">
+              <p className="truncate text-lg font-semibold">{s.full_name}</p>
+              <p className="text-sm">
+                <a
+                  href={`tel:${s.phone}`}
+                  className="pr font-semibold hover:underline"
+                >
+                  {s.phone}
+                </a>
+                <span className="mu"> · {s.english_level}</span>
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className={`chip ${BADGE[s.status]}`}>{s.status}</span>
+                <span className="chip chip-n">
+                  {opened[s.id] || 0} lessons opened
+                </span>
+                {s.study_group && (
+                  <span className="chip chip-n">Group {s.study_group}</span>
+                )}
+                {s.status === "approved" &&
+                  (s.free_access ? (
+                    <span className="chip chip-n">free access</span>
+                  ) : pay === "paid" ? (
+                    <span className="chip chip-g">paid this month</span>
+                  ) : pay === "review" ? (
+                    <span className="chip chip-y">payment under review</span>
+                  ) : (
+                    <span className="chip chip-r">unpaid</span>
+                  ))}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -253,9 +256,9 @@ export default function AdminDashboard() {
         </div>
 
         {unpaid && (
-          <div className="mt-4">
-            <p className="lbl">Payment reminder for {monthLabel}</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="callout mt-4 p-4">
+            <p className="font-semibold">Payment reminder for {monthLabel}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
               <a
                 href={`https://t.me/+${num}`}
                 target="_blank"
@@ -263,21 +266,23 @@ export default function AdminDashboard() {
                 onClick={() => copyReminder(s)}
                 className="btn sm"
               >
-                ✈️ Telegram
+                <Icon name="send" size={14} />
+                Telegram
               </a>
               <a
                 href={`https://wa.me/${num}?text=${encodeURIComponent(msg)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-ghost inline-block"
+                className="btn-ghost"
               >
                 WhatsApp
               </a>
-              <a href={`tel:+${num}`} className="btn-ghost inline-block">
+              <a href={`tel:+${num}`} className="btn-ghost">
+                <Icon name="phone" size={14} />
                 Call
               </a>
             </div>
-            <p className="mu mt-1 text-xs font-bold">
+            <p className="mu mt-2 text-xs">
               Telegram copies the message, then opens the chat: paste and send.
               If the chat does not open, the student&apos;s privacy settings may
               block it, so use WhatsApp or Call.
@@ -327,18 +332,14 @@ export default function AdminDashboard() {
                 <button type="submit" className="btn sm">
                   Save note
                 </button>
-                {savedId === s.id && (
-                  <span className="text-sm font-bold text-green-500">
-                    Saved
-                  </span>
-                )}
+                {savedId === s.id && <span className="chip chip-g">Saved</span>}
               </div>
             </form>
 
             <form
               onSubmit={(e) => resetPassword(e, s)}
               className="mt-4 border-t pt-4"
-              style={{ borderColor: "var(--ln)" }}
+              style={line}
             >
               <label className="lbl">
                 Reset password (type a new temporary password)
@@ -366,56 +367,79 @@ export default function AdminDashboard() {
             </form>
           </>
         )}
-      </div>
+      </article>
     );
   }
 
   return (
-    <div className="up">
+    <div className="up space-y-6">
       {toast && (
         <div className="ok fixed bottom-24 left-1/2 z-[60] w-[90%] max-w-md -translate-x-1/2 shadow-xl lg:bottom-6">
           {toast}
         </div>
       )}
 
-      <h1 className="fluid-h2 font-extrabold">Students</h1>
-
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {cards.map(([icon, label, n]) => (
-          <div key={label} className="cd p-4 sm:p-5">
-            <p className="text-2xl">{icon}</p>
-            <p className="pr mt-2 text-3xl font-extrabold">{n}</p>
-            <p className="mu text-sm font-bold">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by name or phone..."
-        className="field mt-6"
+      <PageHead
+        title="Students"
+        sub="Approve new students, set groups, notes and passwords"
       />
 
-      <h2 className="pr mt-8 text-lg font-extrabold">
-        Waiting for approval ({pending.length})
-      </h2>
-      <div className="mt-3 space-y-3">
-        {pending.length === 0 && (
-          <p className="mu font-semibold">No new students waiting.</p>
-        )}
-        {pending.map(studentCard)}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          value={waitingCount}
+          label="Waiting for approval"
+          tone={waitingCount > 0 ? "warn" : ""}
+        />
+        <Stat
+          value={students.filter((s) => s.status === "approved").length}
+          label="Approved"
+          tone="ok"
+        />
+        <Stat value={stats.lessons} label="Lessons" />
+        <Stat
+          value={stats.toGrade}
+          label="Quizzes to grade"
+          tone={stats.toGrade > 0 ? "warn" : ""}
+        />
       </div>
 
-      <h2 className="pr mt-10 text-lg font-extrabold">
-        All other students ({others.length})
-      </h2>
-      <div className="mt-3 space-y-3">
-        {others.length === 0 && (
-          <p className="mu font-semibold">No students yet.</p>
-        )}
-        {others.map(studentCard)}
+      <div>
+        <label className="lbl">Search</label>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Name or phone number"
+          className="field"
+        />
       </div>
+
+      <section>
+        <h2 className="mb-3 font-semibold">
+          Waiting for approval ({pending.length})
+        </h2>
+        <div className="space-y-3">
+          {pending.length === 0 && (
+            <div className="cd">
+              <Empty icon="users">No new students waiting.</Empty>
+            </div>
+          )}
+          {pending.map(studentCard)}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-semibold">
+          All other students ({others.length})
+        </h2>
+        <div className="space-y-3">
+          {others.length === 0 && (
+            <div className="cd">
+              <Empty icon="users">No students yet.</Empty>
+            </div>
+          )}
+          {others.map(studentCard)}
+        </div>
+      </section>
     </div>
   );
 }

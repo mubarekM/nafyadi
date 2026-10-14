@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import { useStudent, lvLabel } from "@/components/StudentShell";
 import LockedCard from "@/components/LockedCard";
+import Icon from "@/components/Icon";
+import { PageHead, Stat, Empty } from "@/components/ui";
 
 function getEmbedUrl(url) {
   if (!url) return null;
@@ -127,7 +129,7 @@ export default function StudentLessons() {
   }
 
   if (!access) return <LockedCard />;
-  if (!lessons) return <p className="mu font-bold">...</p>;
+  if (!lessons) return <p className="mu font-semibold">...</p>;
 
   // Group by week
   const weeks = [];
@@ -155,20 +157,21 @@ export default function StudentLessons() {
     const done = (checks[l.id] || []).filter((i) => i < list.length).length;
 
     const sections = [];
-    if (embed) sections.push(["video", "🎬", t("secVideo")]);
-    if (l.content) sections.push(["notes", "📝", t("secNotes")]);
-    if (l.file_path || l.file_url) sections.push(["file", "📎", t("secFiles")]);
+    if (embed) sections.push(["video", "video", t("secVideo")]);
+    if (l.content) sections.push(["notes", "file", t("secNotes")]);
+    if (l.file_path || l.file_url)
+      sections.push(["file", "paperclip", t("secFiles")]);
     if (list.length > 0)
       sections.push([
         "check",
-        "✅",
+        "checkCircle",
         `${t("secCheck")} (${done}/${list.length})`,
       ]);
 
     return (
       <div key={l.id} className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-extrabold">{l.title}</p>
+          <p className="font-semibold">{l.title}</p>
           <span className="chip chip-n">{lvLabel(t, l.level)}</span>
           {opened.has(l.id) && (
             <span className="chip chip-g">{t("opened")}</span>
@@ -179,22 +182,25 @@ export default function StudentLessons() {
           <details
             key={key}
             onToggle={(e) => onSection(e, l, key)}
-            className="group/sec rounded-xl border"
+            className="group/sec rounded-md border"
             style={line}
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-extrabold [&::-webkit-details-marker]:hidden">
-              <span className="min-w-0 break-words">
-                {icon} {label}
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-semibold [&::-webkit-details-marker]:hidden">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <Icon name={icon} size={18} className="text-[var(--pri)]" />
+                <span className="min-w-0 break-words">{label}</span>
               </span>
-              <span className="pr text-xl transition-transform group-open/sec:rotate-180">
-                ⌄
-              </span>
+              <Icon
+                name="chevronDown"
+                size={18}
+                className="transition-transform group-open/sec:rotate-180"
+              />
             </summary>
 
             {shown[`${l.id}:${key}`] && (
               <div className="border-t p-4" style={line}>
                 {key === "video" && (
-                  <div className="aspect-video overflow-hidden rounded-2xl bg-black">
+                  <div className="aspect-video overflow-hidden rounded-md bg-black">
                     <iframe
                       src={embed}
                       title={l.title}
@@ -205,14 +211,14 @@ export default function StudentLessons() {
                 )}
 
                 {key === "notes" && (
-                  <div className="whitespace-pre-wrap font-semibold leading-relaxed">
+                  <div className="whitespace-pre-wrap leading-relaxed">
                     {l.content}
                   </div>
                 )}
 
                 {key === "file" && (
                   <div>
-                    <p className="pr mb-2 break-words font-extrabold">
+                    <p className="mb-3 break-words font-semibold">
                       {l.file_name || t("lessonFile")}
                     </p>
                     {urls[l.id] ? (
@@ -226,12 +232,13 @@ export default function StudentLessons() {
                           className="btn sm"
                         >
                           {t("openFile")}
+                          <Icon name="arrowUpRight" size={14} />
                         </a>
                       )
                     ) : fileErr[l.id] ? (
                       <p className="err">{t("fileErr")}</p>
                     ) : (
-                      <p className="mu font-bold">{t("fileLoading")}</p>
+                      <p className="mu">{t("fileLoading")}</p>
                     )}
                   </div>
                 )}
@@ -243,10 +250,12 @@ export default function StudentLessons() {
                       return (
                         <label
                           key={idx}
-                          className="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 font-bold"
+                          className="flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3"
                           style={{
                             borderColor: on ? "var(--pri)" : "var(--ln)",
-                            background: on ? "var(--soft)" : "transparent",
+                            background: on
+                              ? "var(--brand-soft)"
+                              : "transparent",
                           }}
                         >
                           <input
@@ -273,41 +282,34 @@ export default function StudentLessons() {
   }
 
   return (
-    <div className="up space-y-5">
-      <h1 className="fluid-h2 font-extrabold">{t("yourLessons")}</h1>
+    <div className="up space-y-6">
+      <PageHead title={t("yourLessons")} sub={t("courseName")} />
 
-      <div className="cd flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
-        <div className="grad flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl">
-          🎓
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xl font-extrabold">{t("courseName")}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <span className="chip chip-g">{t("activeT")}</span>
-            <span className="chip chip-n">
-              {lvLabel(t, profile.english_level)}
-            </span>
-            <span className="chip chip-n">
-              {weeks.length} {t("weeksCount")}
-            </span>
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat value={`${pct}%`} label={t("stLessons")}>
           <div
-            className="mt-3 h-2.5 w-full overflow-hidden rounded-full"
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
             style={{ background: "var(--soft)" }}
           >
             <div
-              className="grad h-full rounded-full"
-              style={{ width: pct + "%" }}
+              className="h-full rounded-full"
+              style={{ width: pct + "%", background: "var(--pri)" }}
             />
           </div>
-          <p className="mu mt-1 text-xs font-bold">
-            {doneCount} {t("of")} {lessons.length}
-          </p>
-        </div>
+        </Stat>
+        <Stat
+          value={`${doneCount} / ${lessons.length}`}
+          label={t("lessonsOpenedT")}
+          tone="ok"
+        />
+        <Stat value={weeks.length} label={t("psWeeks")} />
+        <Stat value={lvLabel(t, profile.english_level)} label={t("psLevel")} />
       </div>
 
       {weeks.length === 0 && (
-        <p className="mu font-semibold">{t("noLessonsYet")}</p>
+        <div className="cd">
+          <Empty icon="book">{t("noLessonsYet")}</Empty>
+        </div>
       )}
 
       <div className="space-y-4">
@@ -321,19 +323,21 @@ export default function StudentLessons() {
             >
               <summary className="week-h flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                 <div className="min-w-0">
-                  <p className="text-lg font-extrabold">
+                  <p className="text-lg font-semibold">
                     {t("week")} {w.week}
                     {w.title ? `: ${w.title}` : ""}
                   </p>
-                  <p className="mu text-sm font-bold">
+                  <p className="mu text-sm">
                     {count} {t("of")} {w.items.length}
                   </p>
                 </div>
-                <span className="pr text-2xl transition-transform group-open/week:rotate-180">
-                  ⌄
-                </span>
+                <Icon
+                  name="chevronDown"
+                  size={20}
+                  className="transition-transform group-open/week:rotate-180"
+                />
               </summary>
-              <div className="space-y-5 p-4 sm:p-5">
+              <div className="space-y-6 p-4 sm:p-5">
                 {w.items.map(renderLesson)}
               </div>
             </details>
