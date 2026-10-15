@@ -133,6 +133,12 @@ export default function StudentShell({ children }) {
           return;
         }
 
+        // The teacher belongs in the admin area. Do not log them out.
+        if (profile.role === "admin") {
+          router.replace("/admin/dashboard");
+          return;
+        }
+
         // Only a clear "not allowed" answer signs the person out
         if (profile.status !== "approved" || profile.role !== "student") {
           await supabase.auth.signOut({ scope: "local" });

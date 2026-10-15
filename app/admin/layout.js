@@ -6,8 +6,6 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export const instant = false;
-
 export default function AdminLayout({ children }) {
   return (
     <Suspense

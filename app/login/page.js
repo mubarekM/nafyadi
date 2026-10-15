@@ -7,14 +7,25 @@ import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import AuthShell from "@/components/AuthShell";
 import Icon from "@/components/Icon";
+import Captcha, { captchaOn } from "@/components/Captcha";
+
+// Where does this person belong?
+function homeFor(p) {
+  if (p?.role === "admin") return "/admin/dashboard";
+  if (p?.role === "student" && p?.status === "approved") return "/student";
+  return null;
+}
 
 export default function Login() {
   const router = useRouter();
   const { t } = usePrefs();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [show, setShow] = useState(false);
+  const [token, setToken] = useState("");
+  const [reset, setReset] = useState(0);
 
-  // Already logged in? Go straight to the student page.
+  // Already logged in? Go straight to your own dashboard.
   useEffect(() => {
     let alive = true;
     async function check() {
@@ -28,9 +39,8 @@ export default function Login() {
           .select("role, status")
           .eq("id", user.id)
           .maybeSingle();
-        if (alive && p?.role === "student" && p?.status === "approved") {
-          router.replace("/student");
-        }
+        const dest = homeFor(p);
+        if (alive && dest) router.replace(dest);
       } catch {}
     }
     check();
@@ -39,9 +49,20 @@ export default function Login() {
     };
   }, [router]);
 
+  function fail(key) {
+    setError(key);
+    setLoading(false);
+    setToken("");
+    setReset((n) => n + 1);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    if (captchaOn && !token) {
+      setError("captchaErr");
+      return;
+    }
     setLoading(true);
 
     const form = new FormData(e.currentTarget);
@@ -49,49 +70,48 @@ export default function Login() {
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword(
       {
-        email: form.get("email"),
+        email: String(form.get("email") || "").trim(),
         password: form.get("password"),
+        options: captchaOn ? { captchaToken: token } : undefined,
       },
     );
-
     if (signInError) {
-      setError("errWrong");
-      setLoading(false);
+      fail("errWrong");
       return;
     }
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("status, role")
+      .select("role, status")
       .eq("id", data.user.id)
-      .single();
-
-    if (profile?.role === "admin") {
+      .maybeSingle();
+    if (profileError || !profile) {
       await supabase.auth.signOut({ scope: "local" });
-      setError("errAdmin");
-      setLoading(false);
-      return;
-    }
-    if (profile?.status === "pending") {
-      await supabase.auth.signOut({ scope: "local" });
-      setError("errPending");
-      setLoading(false);
-      return;
-    }
-    if (profile?.status === "rejected") {
-      await supabase.auth.signOut({ scope: "local" });
-      setError("errRejected");
-      setLoading(false);
+      fail("errProfile");
       return;
     }
 
+    if (profile.role === "admin") {
+      router.push("/admin/dashboard");
+      return;
+    }
+    if (profile.status === "pending") {
+      await supabase.auth.signOut({ scope: "local" });
+      fail("errPending");
+      return;
+    }
+    if (profile.status === "rejected") {
+      await supabase.auth.signOut({ scope: "local" });
+      fail("errRejected");
+      return;
+    }
     router.push("/student");
   }
 
   return (
     <AuthShell>
       <h1 className="display text-4xl">{t("loginTitle")}</h1>
-      <p className="mu mt-2">{t("loginSub")}</p>
+      <p className="mu mt-2">{t("loginSubAll")}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div>
@@ -106,14 +126,26 @@ export default function Login() {
         </div>
         <div>
           <label className="lbl">{t("password")}</label>
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="field"
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={show ? "text" : "password"}
+              required
+              autoComplete="current-password"
+              className="field !pr-20"
+            />
+            <button
+              type="button"
+              onClick={() => setShow((s) => !s)}
+              aria-pressed={show}
+              className="pr absolute right-1 top-1/2 min-h-[40px] -translate-y-1/2 rounded px-3 text-sm font-semibold"
+            >
+              {show ? t("hidePw") : t("showPw")}
+            </button>
+          </div>
         </div>
+
+        <Captcha onToken={setToken} resetSignal={reset} />
 
         {error && <p className="err">{t(error)}</p>}
 

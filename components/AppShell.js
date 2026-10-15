@@ -88,7 +88,7 @@ export default function AppShell({
     (g.children || []).reduce((n, c) => n + (badges[c.href] || 0), 0);
   const overflow = flat.filter((it) => !tabs.some((x) => x.href === it.href));
   const moreActive = overflow.some(isOn);
-  const home = groups[0].href;
+  const home = groups[0]?.href || groups[0]?.children?.[0]?.href || "/";
   const initial = (user?.name || "?").charAt(0).toUpperCase();
 
   const badge = (n) =>
@@ -253,7 +253,9 @@ export default function AppShell({
                   />
                 )}
                 <span
-                  className={`truncate ${i === crumbs.length - 1 ? "tx font-semibold" : "mu"}`}
+                  className={`truncate ${
+                    i === crumbs.length - 1 ? "tx font-semibold" : "mu"
+                  }`}
                 >
                   {c}
                 </span>
@@ -412,4 +414,3 @@ export default function AppShell({
     </div>
   );
 }
-  

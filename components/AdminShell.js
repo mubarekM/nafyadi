@@ -92,7 +92,7 @@ function modeFor(path) {
 export default function AdminShell({ children }) {
   const router = useRouter();
   const path = usePathname();
-  const isLogin = path === "/admin/login";
+  const isLogin = path === "/admin/login"; // this page just forwards to /login
   const [state, setState] = useState("loading"); // loading | ok | student | problem
   const [name, setName] = useState("");
   const [badges, setBadges] = useState({});
@@ -110,7 +110,7 @@ export default function AdminShell({ children }) {
             if (!silent) setState("problem");
             return;
           }
-          router.replace("/admin/login");
+          router.replace("/login");
           return;
         }
 
@@ -210,7 +210,7 @@ export default function AdminShell({ children }) {
   useEffect(() => {
     const supabase = createClient();
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT" && !isLogin) router.replace("/admin/login");
+      if (event === "SIGNED_OUT" && !isLogin) router.replace("/login");
     });
     return () => data.subscription.unsubscribe();
   }, [router, isLogin]);
@@ -218,7 +218,7 @@ export default function AdminShell({ children }) {
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut({ scope: "local" }); // only this device
-    router.replace("/admin/login");
+    router.replace("/login");
   }
 
   if (isLogin) return children;
@@ -227,15 +227,15 @@ export default function AdminShell({ children }) {
     return (
       <Notice
         icon="lock"
-        title="You are signed in as a student"
-        text="This browser is logged in with a student account, so the teacher area stays closed. Log out, then sign in with your teacher email."
+        title="This is the teacher area"
+        text="You are signed in with a student account. Go to your student page, or log out and sign in with your teacher email."
       >
-        <button onClick={logout} className="btn w-full">
-          Log out and open admin login
-        </button>
-        <a href="/student" className="btn2 w-full">
+        <a href="/student" className="btn w-full">
           Go to my student page
         </a>
+        <button onClick={logout} className="btn2 w-full">
+          Log out
+        </button>
       </Notice>
     );
   }

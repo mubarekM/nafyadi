@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { usePrefs } from "@/lib/prefs";
 import AuthShell from "@/components/AuthShell";
+import Captcha, { captchaOn } from "@/components/Captcha";
 
 // The first word is saved in the database (keep it in English). The second is the translated label.
 const LEVELS = [
@@ -22,22 +23,30 @@ export default function Signup() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [show, setShow] = useState(false);
+  const [token, setToken] = useState("");
+  const [reset, setReset] = useState(0);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    if (captchaOn && !token) {
+      setError(t("captchaErr"));
+      return;
+    }
     setLoading(true);
 
     const form = new FormData(e.currentTarget);
     const supabase = createClient();
 
     const { error: signUpError } = await supabase.auth.signUp({
-      email: form.get("email"),
+      email: String(form.get("email") || "").trim(),
       password: form.get("password"),
       options: {
+        captchaToken: captchaOn ? token : undefined,
         data: {
-          full_name: form.get("full_name"),
-          phone: form.get("phone"),
+          full_name: String(form.get("full_name") || "").trim(),
+          phone: String(form.get("phone") || "").trim(),
           english_level: form.get("english_level"),
           consent_at: new Date().toISOString(),
           consent_version: CONSENT_VERSION,
@@ -45,12 +54,14 @@ export default function Signup() {
       },
     });
 
-    // Students must wait for approval, so log them out right away
-    await supabase.auth.signOut();
+    // Students must wait for approval, so log them out right away (only this device)
+    await supabase.auth.signOut({ scope: "local" });
     setLoading(false);
 
     if (signUpError) {
       setError(signUpError.message);
+      setToken("");
+      setReset((n) => n + 1);
       return;
     }
     setDone(true);
@@ -58,8 +69,8 @@ export default function Signup() {
 
   return (
     <AuthShell>
-      <h1 className="text-4xl font-extrabold">{t("signTitle")}</h1>
-      <p className="mu mt-2 font-semibold">{t("signSub")}</p>
+      <h1 className="display text-4xl">{t("signTitle")}</h1>
+      <p className="mu mt-2">{t("signSub")}</p>
 
       {done ? (
         <p className="ok mt-8">{t("thanks")}</p>
@@ -71,11 +82,23 @@ export default function Signup() {
           </div>
           <div>
             <label className="lbl">{t("email")}</label>
-            <input name="email" type="email" required className="field" />
+            <input
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="field"
+            />
           </div>
           <div>
             <label className="lbl">{t("phone")}</label>
-            <input name="phone" type="tel" required className="field" />
+            <input
+              name="phone"
+              type="tel"
+              required
+              autoComplete="tel"
+              className="field"
+            />
           </div>
           <div>
             <label className="lbl">{t("level")}</label>
@@ -96,29 +119,36 @@ export default function Signup() {
             </select>
           </div>
           <div>
-            <label className="lbl">
-              {t("password")} ({t("pwHint")})
-            </label>
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              className="field"
-            />
+            <label className="lbl">{t("password")}</label>
+            <div className="relative">
+              <input
+                name="password"
+                type={show ? "text" : "password"}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="field !pr-20"
+              />
+              <button
+                type="button"
+                onClick={() => setShow((s) => !s)}
+                aria-pressed={show}
+                className="pr absolute right-1 top-1/2 min-h-[40px] -translate-y-1/2 rounded px-3 text-sm font-semibold"
+              >
+                {show ? t("hidePw") : t("showPw")}
+              </button>
+            </div>
+            <p className="mu mt-1 text-xs">{t("pwHint8")}</p>
           </div>
 
-          <label
-            className="flex items-start gap-3 rounded-xl border-2 p-3 text-sm font-bold"
-            style={{ borderColor: "var(--bd)" }}
-          >
+          <label className="flex items-start gap-3 text-sm">
             <input name="consent" type="checkbox" required className="mt-0.5" />
             <span>
               {t("consentA")}{" "}
               <Link
                 href="/terms"
                 target="_blank"
-                className="pr font-extrabold underline"
+                className="pr font-semibold underline"
               >
                 {t("termsT")}
               </Link>{" "}
@@ -126,13 +156,15 @@ export default function Signup() {
               <Link
                 href="/privacy"
                 target="_blank"
-                className="pr font-extrabold underline"
+                className="pr font-semibold underline"
               >
                 {t("privacyT")}
               </Link>
               . {t("consentKid")}
             </span>
           </label>
+
+          <Captcha onToken={setToken} resetSignal={reset} />
 
           {error && <p className="err">{error}</p>}
 
@@ -142,9 +174,12 @@ export default function Signup() {
         </form>
       )}
 
-      <p className="mu mt-8 text-center text-sm font-bold">
+      <p className="mu mt-8 text-center text-sm">
         {t("hasAcc")}{" "}
-        <Link href="/login" className="pr font-extrabold underline">
+        <Link
+          href="/login"
+          className="pr font-semibold underline underline-offset-4"
+        >
           {t("goLogin")}
         </Link>
       </p>

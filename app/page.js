@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePrefs } from "@/lib/prefs";
 import { createClient } from "@/lib/supabase";
 import Controls from "@/components/Controls";
+import HeaderAuth from "@/components/HeaderAuth";
 import Icon from "@/components/Icon";
 import { BANKS, PLANS } from "@/lib/pay-config";
 import { GROUPS, LIVE } from "@/lib/schedule";
@@ -147,18 +148,7 @@ export default function Home() {
           </nav>
           <div className="flex items-center gap-2">
             <Controls />
-            <Link
-              href="/login"
-              className="btn2 !min-h-[40px] !px-4 hidden text-sm sm:inline-flex"
-            >
-              {t("login")}
-            </Link>
-            <Link
-              href="/signup"
-              className="btn !min-h-[40px] !px-4 hidden text-sm sm:inline-flex"
-            >
-              {t("join")}
-            </Link>
+            <HeaderAuth />
             <button
               onClick={() => setMenu(!menu)}
               aria-label="Menu"
@@ -185,14 +175,7 @@ export default function Home() {
                 {t(k)}
               </a>
             ))}
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Link href="/login" className="btn2">
-                {t("login")}
-              </Link>
-              <Link href="/signup" className="btn">
-                {t("join")}
-              </Link>
-            </div>
+            <HeaderAuth layout="menu" />
           </div>
         )}
       </header>
@@ -361,8 +344,8 @@ export default function Home() {
         <div className="mx-auto max-w-6xl">
           <Head k="ovSchedule" title={t("schT")} text={t("schD")} />
 
-          {/* Table on bigger screens */}
-          <div className="cd mt-10 hidden overflow-hidden md:block">
+          {/* Table on laptops and bigger */}
+          <div className="cd mt-10 hidden overflow-x-auto lg:block">
             <table className="w-full text-left">
               <thead style={{ background: "var(--soft)" }}>
                 <tr className="text-sm">
@@ -392,8 +375,8 @@ export default function Home() {
             </table>
           </div>
 
-          {/* Cards on phones */}
-          <div className="mt-10 space-y-4 md:hidden">
+          {/* Cards on phones and tablets */}
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:hidden">
             {rows.map((r, i) => (
               <div key={i} className="cd p-4">
                 <div
@@ -742,7 +725,7 @@ export default function Home() {
             <ul className="mu mt-3 space-y-2 text-sm">
               <li>
                 <Link href="/login" className="hover:text-[var(--pri)]">
-                  {t("cta2")}
+                  {t("login")}
                 </Link>
               </li>
               <li>
