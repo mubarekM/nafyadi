@@ -1,0 +1,10 @@
+import { sameOrigin } from "@/lib/guard";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+export async function POST(req) {
+  if (!sameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return NextResponse.json({ ok: true });
+}
