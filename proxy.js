@@ -6,7 +6,7 @@ const isDev = process.env.NODE_ENV !== "production";
 
 // false = test mode: only reports problems in the browser console, blocks nothing
 // true  = enforce: blocks everything that is not on the list below
-const ENFORCE_CSP = false;
+const ENFORCE_CSP = true;
 
 const CSP = [
   "default-src 'self'",
