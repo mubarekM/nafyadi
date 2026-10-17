@@ -23,7 +23,8 @@ const CSP = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
-  ...(isDev ? [] : ["upgrade-insecure-requests"]),
+  // This rule is ignored (and only causes warnings) in test mode
+  ...(ENFORCE_CSP && !isDev ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 export async function proxy(request) {

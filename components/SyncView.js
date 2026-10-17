@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
+import PageBoundary from "./PageBoundary";
 
 // mode "auto"   = refresh by itself when it is safe
 // mode "notify" = show a small "Refresh" bar instead
@@ -117,7 +118,9 @@ export default function SyncView({
         </div>
       )}
       <div ref={wrap}>
-        <div key={gen}>{children}</div>
+        <div key={gen}>
+          <PageBoundary resetKey={resetKey}>{children}</PageBoundary>
+        </div>
       </div>
     </>
   );
