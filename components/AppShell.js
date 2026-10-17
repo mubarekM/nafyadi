@@ -99,7 +99,8 @@ export default function AppShell({
     (g.children || []).reduce((n, c) => n + (badges[c.href] || 0), 0);
   const overflow = flat.filter((it) => !tabs.some((x) => x.href === it.href));
   const moreActive = overflow.some(isOn);
-  const home = groups[0].href;
+  // The first menu item can be a folder with no address, so take the first real page
+  const home = groups[0].href || flat.find((x) => x.href)?.href || "/";
   const initial = (user?.name || "?").charAt(0).toUpperCase();
 
   const badge = (n) =>
@@ -202,7 +203,7 @@ export default function AppShell({
                   </>
                 ) : (
                   <Link
-                    href={g.href}
+                    href={g.href || home}
                     aria-current={isOn(g) ? "page" : undefined}
                     className={row(isOn(g))}
                   >
