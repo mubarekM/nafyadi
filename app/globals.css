@@ -730,3 +730,35 @@ html.hc :focus-visible {
     print-color-adjust: exact;
   }
 }
+
+/* ===== The teacher (admin) area looks different from the student area ===== */
+.role-admin {
+  --pri: #2f3f9e;
+  --btn: #2f3f9e;
+  --btn-h: #222e78;
+  --deep: #232f7a;
+  --brand-soft: #e7eafb;
+  --acc-t: #7a5400;
+}
+html.dark .role-admin {
+  --pri: #a5b4ff;
+  --btn: #3a4bc4;
+  --btn-h: #2b3aa0;
+  --deep: #2b3a9a;
+  --brand-soft: #1a2150;
+  --acc-t: #f0cb73;
+}
+/* High contrast mode keeps its own colors in both areas */
+html.hc .role-admin {
+  --pri: unset;
+  --btn: unset;
+  --btn-h: unset;
+  --deep: unset;
+  --brand-soft: unset;
+  --acc-t: unset;
+}
+/* The thin line at the very top of the page: green for students, indigo and gold for the teacher */
+html[data-role="admin"] body::before {
+  background: linear-gradient(90deg, #27348b, #d9a21b);
+  height: 6px;
+}

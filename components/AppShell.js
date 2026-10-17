@@ -62,10 +62,21 @@ export default function AppShell({
   const [more, setMore] = useState(false);
   const [open, setOpen] = useState({});
   const kind = tag === "Student" ? "s" : "a";
+  const role = kind === "s" ? "student" : "admin";
+  const roleLabel = role === "admin" ? t("roleAdmin") : t("roleStudent");
+  const roleChip = role === "admin" ? "chip chip-y" : "chip chip-g";
 
   useEffect(() => {
     setMore(false);
   }, [path]);
+
+  // Tells the page which area this is (changes the thin line at the top)
+  useEffect(() => {
+    document.documentElement.dataset.role = role;
+    return () => {
+      delete document.documentElement.dataset.role;
+    };
+  }, [role]);
 
   const line = { borderColor: "var(--ln)" };
   const isOn = (it) =>
@@ -88,7 +99,7 @@ export default function AppShell({
     (g.children || []).reduce((n, c) => n + (badges[c.href] || 0), 0);
   const overflow = flat.filter((it) => !tabs.some((x) => x.href === it.href));
   const moreActive = overflow.some(isOn);
-  const home = groups[0]?.href || groups[0]?.children?.[0]?.href || "/";
+  const home = groups[0].href;
   const initial = (user?.name || "?").charAt(0).toUpperCase();
 
   const badge = (n) =>
@@ -116,11 +127,16 @@ export default function AppShell({
   let lastSection = null;
 
   return (
-    <div className="b0 tx min-h-dvh">
+    <div
+      className={`b0 tx min-h-dvh ${role === "admin" ? "role-admin" : "role-student"}`}
+    >
       {/* ===== Desktop sidebar ===== */}
       <aside
         className="b0 fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r lg:flex"
-        style={{ ...line, background: "var(--card)" }}
+        style={{
+          ...line,
+          background: role === "admin" ? "var(--brand-soft)" : "var(--card)",
+        }}
       >
         <Link
           href={home}
@@ -130,7 +146,7 @@ export default function AppShell({
           {logo}
           <span className="min-w-0 leading-tight">
             <span className="block truncate font-semibold">{brand}</span>
-            <span className="mu block truncate text-xs">{tag}</span>
+            <span className={`${roleChip} mt-1`}>{roleLabel}</span>
           </span>
         </Link>
 
@@ -208,7 +224,7 @@ export default function AppShell({
           <div className="flex items-center gap-3 px-2 py-2">
             <span
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold"
-              style={{ background: "var(--brand-soft)", color: "var(--pri)" }}
+              style={{ background: "var(--card)", color: "var(--pri)" }}
               aria-hidden="true"
             >
               {initial}
@@ -236,6 +252,7 @@ export default function AppShell({
           <Link href={home} className="flex items-center gap-2 lg:hidden">
             {logo}
             <span className="font-semibold">Nafyad</span>
+            <span className={roleChip}>{roleLabel}</span>
           </Link>
 
           <nav
@@ -253,9 +270,7 @@ export default function AppShell({
                   />
                 )}
                 <span
-                  className={`truncate ${
-                    i === crumbs.length - 1 ? "tx font-semibold" : "mu"
-                  }`}
+                  className={`truncate ${i === crumbs.length - 1 ? "tx font-semibold" : "mu"}`}
                 >
                   {c}
                 </span>
@@ -264,6 +279,9 @@ export default function AppShell({
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <span className={`${roleChip} hidden lg:inline-block`}>
+              {roleLabel}
+            </span>
             <Controls showLang={showLang} />
           </div>
         </header>

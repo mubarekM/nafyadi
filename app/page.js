@@ -2,9 +2,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePrefs } from "@/lib/prefs";
-import { createClient } from "@/lib/supabase";
 import Controls from "@/components/Controls";
 import HeaderAuth from "@/components/HeaderAuth";
+import Captcha, { captchaOn } from "@/components/Captcha";
 import Icon from "@/components/Icon";
 import { BANKS, PLANS } from "@/lib/pay-config";
 import { GROUPS, LIVE } from "@/lib/schedule";
@@ -57,7 +57,9 @@ function Photo({ src, alt, cls }) {
 export default function Home() {
   const { t } = usePrefs();
   const [menu, setMenu] = useState(false);
-  const [enr, setEnr] = useState("idle"); // idle | sending | ok | error
+  const [enr, setEnr] = useState("idle"); // idle | sending | ok | error | limit | captcha
+  const [token, setToken] = useState("");
+  const [reset, setReset] = useState(0);
   const line = { borderColor: "var(--ln)" };
 
   const nav = [
@@ -81,29 +83,43 @@ export default function Home() {
 
   async function sendEnroll(e) {
     e.preventDefault();
-    const form = e.currentTarget;
+    if (enr === "sending") return;
+    const form = e.currentTarget; // keep it: it is empty after the first await
     const fd = new FormData(form);
 
-    // Hidden trap field: real people never fill it, spam bots often do
-    if (fd.get("website")) {
-      setEnr("ok");
+    if (captchaOn && !token) {
+      setEnr("captcha");
       return;
     }
-
     setEnr("sending");
-    const supabase = createClient();
-    const { error } = await supabase.from("enrollments").insert({
-      full_name: String(fd.get("full_name") || "").trim(),
-      email: String(fd.get("email") || "").trim(),
-      phone: String(fd.get("phone") || "").trim(),
-      consent_at: new Date().toISOString(),
-    });
-    if (error) {
+
+    try {
+      const res = await fetch("/api/enroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: String(fd.get("full_name") || "").trim(),
+          email: String(fd.get("email") || "").trim(),
+          phone: String(fd.get("phone") || "").trim(),
+          consent: fd.get("consent") === "on",
+          website: String(fd.get("website") || ""), // hidden trap field
+          token,
+        }),
+      });
+      if (res.ok) {
+        form.reset();
+        setEnr("ok");
+      } else if (res.status === 429) {
+        setEnr("limit");
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setEnr(j.error === "captcha" ? "captcha" : "error");
+      }
+    } catch {
       setEnr("error");
-      return;
     }
-    form.reset();
-    setEnr("ok");
+    setToken("");
+    setReset((n) => n + 1);
   }
 
   const Head = ({ k, title, text }) => (
@@ -193,13 +209,22 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/signup" className="btn w-full sm:w-auto">
-                {t("cta1")}
+                {t("joinStudent")}
                 <Icon name="arrowRight" size={16} />
               </Link>
-              <a href="#schedule" className="btn2 w-full sm:w-auto">
-                {t("seeSchedule")}
-              </a>
+              <Link href="/login" className="btn2 w-full sm:w-auto">
+                {t("loginStudentT")}
+              </Link>
             </div>
+            <p className="mu mt-5 text-sm">
+              {t("teacherQ")}{" "}
+              <Link
+                href="/login?as=teacher"
+                className="pr font-semibold underline underline-offset-4"
+              >
+                {t("teacherLink")}
+              </Link>
+            </p>
 
             <dl
               className="mt-10 grid max-w-xl grid-cols-3 border-t pt-6"
@@ -604,7 +629,11 @@ export default function Home() {
                   </span>
                 </label>
 
+                <Captcha onToken={setToken} resetSignal={reset} />
+
                 {enr === "error" && <p className="err">{t("enrollErr")}</p>}
+                {enr === "limit" && <p className="err">{t("enrollLimit")}</p>}
+                {enr === "captcha" && <p className="err">{t("captchaErr")}</p>}
                 <button
                   type="submit"
                   disabled={enr === "sending"}
@@ -725,12 +754,20 @@ export default function Home() {
             <ul className="mu mt-3 space-y-2 text-sm">
               <li>
                 <Link href="/login" className="hover:text-[var(--pri)]">
-                  {t("login")}
+                  {t("loginStudentT")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/login?as=teacher"
+                  className="hover:text-[var(--pri)]"
+                >
+                  {t("loginTeacherT")}
                 </Link>
               </li>
               <li>
                 <Link href="/signup" className="hover:text-[var(--pri)]">
-                  {t("cta1")}
+                  {t("joinStudent")}
                 </Link>
               </li>
             </ul>
@@ -752,6 +789,11 @@ export default function Home() {
                 <a href={`tel:${TEL}`} className="hover:text-[var(--pri)]">
                   {TEL}
                 </a>
+              </li>
+              <li>
+                <Link href="/verify" className="hover:text-[var(--pri)]">
+                  {t("verFoot")}
+                </Link>
               </li>
               <li>
                 <Link href="/privacy" className="hover:text-[var(--pri)]">

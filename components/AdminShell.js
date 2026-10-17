@@ -48,6 +48,7 @@ const GROUPS = [
       { href: "/admin/certificates", label: "Certificates", icon: "award" },
       { href: "/admin/export", label: "Reports and export", icon: "chart" },
       { href: "/admin/privacy", label: "Privacy tools", icon: "shield" },
+      { href: "/admin/activity", label: "Activity log", icon: "clock" },
     ],
   },
   { key: "acc", label: "My account", icon: "user", href: "/admin/account" },
@@ -82,6 +83,7 @@ function modeFor(path) {
     path.startsWith("/admin/export") ||
     path.startsWith("/admin/announcements") ||
     path.startsWith("/admin/privacy") ||
+    path.startsWith("/admin/activity") ||
     path.startsWith("/admin/account")
   ) {
     return "off";
@@ -110,7 +112,7 @@ export default function AdminShell({ children }) {
             if (!silent) setState("problem");
             return;
           }
-          router.replace("/login");
+          router.replace("/login?as=teacher");
           return;
         }
 
@@ -210,7 +212,8 @@ export default function AdminShell({ children }) {
   useEffect(() => {
     const supabase = createClient();
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT" && !isLogin) router.replace("/login");
+      if (event === "SIGNED_OUT" && !isLogin)
+        router.replace("/login?as=teacher");
     });
     return () => data.subscription.unsubscribe();
   }, [router, isLogin]);
@@ -218,7 +221,7 @@ export default function AdminShell({ children }) {
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut({ scope: "local" }); // only this device
-    router.replace("/login");
+    router.replace("/login?as=teacher");
   }
 
   if (isLogin) return children;
